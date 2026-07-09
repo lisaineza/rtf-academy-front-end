@@ -50,37 +50,38 @@ async function request(path, { method = 'GET', body, token, params } = {}) {
 }
 
 export const api = {
-  // Auth & users — mirrors /auth/*, /users/me
+  // Auth & users — Firebase authentication + current user profile
   register: (payload) => request('/auth/register', { method: 'POST', body: payload }),
   login: (payload) => request('/auth/login', { method: 'POST', body: payload }),
-  me: (token) => request('/users/me', { token }),
+  me: (token) => request('/users/me/', { token }),
 
-  // Courses — mirrors /courses
-  listCourses: (params) => request('/courses', { params }),
-  getCourse: (id) => request(`/courses/${id}`),
+  // Courses — supports both ID formats (UUID string or integer)
+  listCourses: (params) => request('/courses/', { params }),
+  getCourse: (id) => request(`/courses/${id}/`),
+  getLessonDetail: (lessonId, token) => request(`/courses/lessons/${lessonId}/`, { token }),
 
-  // Enrollments — mirrors /enrollments
-  enroll: (courseId, token) => request('/enrollments', { method: 'POST', body: { course_id: courseId }, token }),
-  listEnrollments: (token) => request('/enrollments', { token }),
-  getEnrollment: (courseId, token) => request(`/enrollments/${courseId}`, { token }),
+  // Enrollments — Django REST router generates list/create/retrieve/update/delete
+  enroll: (courseId, token) => request('/enrollments/', { method: 'POST', body: { course: courseId }, token }),
+  listEnrollments: (token) => request('/enrollments/', { token }),
+  getEnrollment: (courseId, token) => request(`/enrollments/${courseId}/`, { token }),
 
   // Progress — mirrors /progress/*
   completeLesson: (lessonId, watchTimeSeconds, token) =>
-    request('/progress/lesson', { method: 'POST', body: { lesson_id: lessonId, watch_time_seconds: watchTimeSeconds }, token }),
-  getCourseProgress: (courseId, token) => request(`/progress/course/${courseId}`, { token }),
+    request('/progress/lesson/', { method: 'POST', body: { lesson_id: lessonId, watch_time_seconds: watchTimeSeconds }, token }),
+  getCourseProgress: (courseId, token) => request(`/progress/course/${courseId}/`, { token }),
 
   // Assessments — mirrors /assessments/*
-  getModuleAssessment: (moduleId, token) => request(`/assessments/module/${moduleId}`, { token }),
+  getModuleAssessment: (moduleId, token) => request(`/assessments/module/${moduleId}/`, { token }),
   submitAssessment: (assessmentId, payload, token) =>
-    request(`/assessments/${assessmentId}/submit`, { method: 'POST', body: payload, token }),
+    request(`/assessments/${assessmentId}/submit/`, { method: 'POST', body: payload, token }),
 
   // Certificates — mirrors /certificates/*
-  generateCertificate: (courseId, token) => request(`/certificates/generate/${courseId}`, { method: 'POST', token }),
-  myCertificates: (token) => request('/certificates/my', { token }),
-  verifyCertificate: (code) => request(`/certificates/verify/${code}`),
+  generateCertificate: (courseId, token) => request(`/certificates/generate/${courseId}/`, { method: 'POST', token }),
+  myCertificates: (token) => request('/certificates/my/', { token }),
+  verifyCertificate: (code) => request(`/certificates/verify/${code}/`),
 
   // Admin — mirrors /admin/*
-  adminStats: (token) => request('/admin/stats', { token }),
+  adminStats: (token) => request('/admin/stats/', { token }),
 }
 
 export { ApiError }

@@ -22,9 +22,13 @@ export default function Header() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-navy">
-          <Link to="/courses">Courses</Link>
-          {user && <Link to="/dashboard">My Learning</Link>}
-          {user && <Link to="/certificates">Certificates</Link>}
+          {!user?.role || user?.role !== 'admin' ? (
+            <>
+              <Link to="/courses">Courses</Link>
+              {user && <Link to="/dashboard">My Learning</Link>}
+              {user && <Link to="/certificates">Certificates</Link>}
+            </>
+          ) : null}
           {user?.role === 'admin' && <Link to="/admin">Admin</Link>}
         </nav>
 
@@ -47,9 +51,13 @@ export default function Header() {
 
       {menuOpen && (
         <nav className="md:hidden border-t border-gray-100 px-4 py-3 flex flex-col gap-3 text-sm font-medium text-navy">
-          <Link to="/courses" onClick={() => setMenuOpen(false)}>Courses</Link>
-          {user && <Link to="/dashboard" onClick={() => setMenuOpen(false)}>My Learning</Link>}
-          {user && <Link to="/certificates" onClick={() => setMenuOpen(false)}>Certificates</Link>}
+          {!user?.role || user?.role !== 'admin' ? (
+            <>
+              <Link to="/courses" onClick={() => setMenuOpen(false)}>Courses</Link>
+              {user && <Link to="/dashboard" onClick={() => setMenuOpen(false)}>My Learning</Link>}
+              {user && <Link to="/certificates" onClick={() => setMenuOpen(false)}>Certificates</Link>}
+            </>
+          ) : null}
           {user?.role === 'admin' && <Link to="/admin" onClick={() => setMenuOpen(false)}>Admin</Link>}
         </nav>
       )}
