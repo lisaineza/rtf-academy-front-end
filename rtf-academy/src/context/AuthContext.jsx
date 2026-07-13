@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { firebaseEnabled } from '../services/firebase.js'
+import { clearApiAuthToken, setApiAuthToken } from '../services/api.js'
+import { auth, firebaseEnabled, getFirebaseToken, googleProvider } from '../services/firebase.js'
+import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
 
 const AuthContext = createContext(null)
 const STORAGE_KEY = 'rtf_academy_user'
@@ -18,6 +20,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [backendReachable] = useState(true)
+  const [token, setTokenState] = useState(null)
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY)
@@ -27,11 +30,56 @@ export function AuthProvider({ children }) {
     setLoading(false)
   }, [])
 
+  useEffect(() => {
+    if (!firebaseEnabled || !auth) return undefined
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        setTokenState(null)
+        clearApiAuthToken()
+        return
+      }
+
+      const nextToken = await getFirebaseToken()
+      setTokenState(nextToken)
+      if (nextToken) {
+        setApiAuthToken(nextToken)
+      } else {
+        clearApiAuthToken()
+      }
+
+      const mappedUser = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        full_name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Student',
+        role: firebaseUser.email?.includes('admin') ? 'admin' : 'student',
+        created_at: new Date().toISOString(),
+        photoURL: firebaseUser.photoURL,
+      }
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(mappedUser))
+      setUser(mappedUser)
+    })
+
+    return unsubscribe
+  }, [])
+
+  async function persistSession(nextUser, nextToken = null) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser))
+    setUser(nextUser)
+    setTokenState(nextToken)
+    if (nextToken) {
+      setApiAuthToken(nextToken)
+    } else {
+      clearApiAuthToken()
+    }
+    return nextUser
+  }
+
   async function register({ full_name, email }) {
     const newUser = buildUserRecord({ email, full_name, role: 'student' })
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser))
-    setUser(newUser)
-    return newUser
+    const nextToken = await getFirebaseToken()
+    return persistSession(newUser, nextToken)
   }
 
   async function login({ email }) {
@@ -44,27 +92,58 @@ export function AuthProvider({ children }) {
           full_name: email.split('@')[0],
           role: email.includes('admin') ? 'admin' : 'student',
         })
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(loggedIn))
-    setUser(loggedIn)
-    return loggedIn
+    const nextToken = await getFirebaseToken()
+    return persistSession(loggedIn, nextToken)
   }
 
   async function loginWithGoogle() {
-    throw new Error('Google sign-in is unavailable without Firebase config.')
+    if (!firebaseEnabled || !auth || !googleProvider) {
+      throw new Error('Google sign-in is unavailable without Firebase config.')
+    }
+
+    const result = await signInWithPopup(auth, googleProvider)
+    const firebaseUser = result.user
+    const nextToken = await firebaseUser.getIdToken()
+    const signedInUser = {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email,
+      full_name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Student',
+      role: firebaseUser.email?.includes('admin') ? 'admin' : 'student',
+      created_at: new Date().toISOString(),
+      photoURL: firebaseUser.photoURL,
+    }
+
+    return persistSession(signedInUser, nextToken)
   }
 
-  function logout() {
+  async function logout() {
     localStorage.removeItem(STORAGE_KEY)
     setUser(null)
+    setTokenState(null)
+    clearApiAuthToken()
+    if (firebaseEnabled && auth) {
+      await signOut(auth)
+    }
   }
 
   async function getToken() {
-    return null
+    if (!firebaseEnabled || !auth?.currentUser) {
+      return token
+    }
+
+    const nextToken = await getFirebaseToken()
+    setTokenState(nextToken)
+    if (nextToken) {
+      setApiAuthToken(nextToken)
+    } else {
+      clearApiAuthToken()
+    }
+    return nextToken
   }
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, register, login, loginWithGoogle, logout, getToken, firebaseEnabled, backendReachable }}
+      value={{ user, loading, register, login, loginWithGoogle, logout, getToken, firebaseEnabled, backendReachable, token }}
     >
       {children}
     </AuthContext.Provider>

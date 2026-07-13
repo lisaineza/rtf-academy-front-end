@@ -11,11 +11,13 @@ import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage.jsx'
 import StudentDashboard from '../pages/student/StudentDashboard.jsx'
 import CourseCatalogPage from '../pages/student/CourseCatalogPage.jsx'
 import CourseDetailPage from '../pages/student/CourseDetailPage.jsx'
+import LessonPage from '../pages/student/LessonPage.jsx'
 import EnrollmentSuccessPage from '../pages/student/EnrollmentSuccessPage.jsx'
 import CoursePage from '../pages/student/CoursePage.jsx'
 import AssessmentPage from '../pages/student/AssessmentPage.jsx'
 import CourseCompletePage from '../pages/student/CourseCompletePage.jsx'
 import CertificatesPage from '../pages/student/CertificatesPage.jsx'
+import VerifyCertificatePage from '../pages/VerifyCertificatePage.jsx'
 
 import AdminDashboard from '../pages/admin/AdminDashboard.jsx'
 
@@ -36,11 +38,14 @@ export default function AppRoutes() {
           <Route path="/dashboard" element={<ProtectedRoute><StudentDashboard /></ProtectedRoute>} />
           <Route path="/enrollment-success/:id" element={<ProtectedRoute><EnrollmentSuccessPage /></ProtectedRoute>} />
           <Route path="/learn/:id" element={<ProtectedRoute><CoursePage /></ProtectedRoute>} />
+          <Route path="/lessons/:id" element={<ProtectedRoute><LessonPage /></ProtectedRoute>} />
           <Route path="/learn/:id/assessment/:moduleId" element={<ProtectedRoute><AssessmentPage /></ProtectedRoute>} />
           <Route path="/course-complete/:id" element={<ProtectedRoute><CourseCompletePage /></ProtectedRoute>} />
           <Route path="/certificates" element={<ProtectedRoute><CertificatesPage /></ProtectedRoute>} />
 
           <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
+
+          <Route path="/verify/:code" element={<VerifyCertificatePage />} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

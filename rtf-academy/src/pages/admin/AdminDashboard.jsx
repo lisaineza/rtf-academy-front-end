@@ -1,7 +1,39 @@
 import { Bar, BarChart, ResponsiveContainer, XAxis } from 'recharts'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { ADMIN_STATS } from '../../data/mockData'
 import ProgressBar from '../../components/common/ProgressBar.jsx'
+import { api } from '../../services/api.js'
+import { COURSES as MOCK_COURSES } from '../../data/mockData'
+
+function AdminCourseForm({ onCreate }) {
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [thumbnail, setThumbnail] = useState('')
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    const payload = { title, description, thumbnail_url: thumbnail }
+    try {
+      const res = await api.createCourse(payload).catch(() => null)
+      if (res) onCreate(res)
+      else onCreate({ id: Date.now(), title, description, thumbnail_url: thumbnail })
+      setTitle(''); setDescription(''); setThumbnail('')
+    } catch (err) {
+      console.error('Create course failed', err)
+      alert('Create failed')
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-2">
+      <input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full border rounded px-2 py-1" />
+      <input placeholder="Thumbnail URL" value={thumbnail} onChange={(e) => setThumbnail(e.target.value)} className="w-full border rounded px-2 py-1" />
+      <textarea placeholder="Short description" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full border rounded px-2 py-1" />
+      <button className="bg-navy text-white px-3 py-1 rounded text-sm">Create Course</button>
+    </form>
+  )
+}
 
 const statusColors = {
   Complete: 'bg-green-100 text-green-700',
@@ -11,6 +43,24 @@ const statusColors = {
 
 export default function AdminDashboard() {
   const { user } = useAuth()
+  const [courses, setCourses] = useState([])
+
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      try {
+        const data = await api.listCourses().catch(() => [])
+        if (!mounted) return
+        if (Array.isArray(data) && data.length > 0) setCourses(data)
+        else setCourses(MOCK_COURSES.map((c) => ({ id: String(c.id), title: c.title, description: c.description, thumbnail_url: c.thumbnail })))
+      } catch (err) {
+        console.error('Failed to load courses for admin', err)
+        if (mounted) setCourses(MOCK_COURSES.map((c) => ({ id: String(c.id), title: c.title, description: c.description, thumbnail_url: c.thumbnail })))
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [])
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
@@ -65,6 +115,34 @@ export default function AdminDashboard() {
           ))}
         </div>
       </div>
+
+        <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card mt-6">
+          <div className="flex justify-between items-center mb-3">
+            <p className="font-semibold text-navy text-sm">Manage Courses</p>
+          </div>
+          <div className="mb-4">
+            <AdminCourseForm onCreate={(c) => setCourses((s) => [c, ...s])} />
+          </div>
+          <div className="space-y-2">
+            {courses.map((c) => (
+              <div key={c.id} className="flex items-center justify-between bg-white border border-gray-100 rounded px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium text-navy">{c.title}</p>
+                  <p className="text-xs text-gray-500">{c.description}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={async () => {
+                    if (!confirm('Delete this course?')) return
+                    try {
+                      await api.deleteCourse(c.id).catch(() => null)
+                      setCourses((s) => s.filter((x) => String(x.id) !== String(c.id)))
+                    } catch (err) { console.error('Delete failed', err); alert('Delete failed') }
+                  }} className="text-sm text-red-600">Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
       <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card">
         <p className="font-semibold text-navy text-sm mb-3">Recent Learner Activity</p>

@@ -1,34 +1,60 @@
 import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext.jsx'
-import { useProgress } from '../../context/ProgressContext.jsx'
-import { COURSES } from '../../data/mockData'
+import { api } from '../../services/api.js'
 import StatCard from '../../components/common/StatCard.jsx'
 import ProgressBar from '../../components/common/ProgressBar.jsx'
 
 export default function StudentDashboard() {
   const { user } = useAuth()
-  const { allEnrollments } = useProgress()
-  const enrollments = allEnrollments()
+  const [enrollments, setEnrollments] = useState([])
+  const [certs, setCerts] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const active = enrollments.filter((e) => e.status === 'active')
-  const completed = enrollments.filter((e) => e.status === 'completed')
-  const certificates = enrollments.filter((e) => e.certificate)
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      setLoading(true)
+      try {
+        const me = await api.me()
+        if (!mounted) return
 
-  const recommended = COURSES.filter((c) => !enrollments.some((e) => e.course_id === c.id)).slice(0, 2)
+        const enrolls = await api.listEnrollments()
+        if (!mounted) return
+        setEnrollments(enrolls)
+
+        const myCerts = await api.myCertificates()
+        if (!mounted) return
+        setCerts(myCerts)
+      } catch (err) {
+        console.error('Dashboard load failed', err)
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+    load()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const totalEnrolled = enrollments.length
+  const totalCompleted = enrollments.filter((e) => e.is_completed).length
+  const totalCertificates = certs.length
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-xl font-bold text-navy mb-4">Hi, {user?.full_name?.split(' ')[0] || 'Learner'}!</h1>
+      <h1 className="text-xl font-bold text-navy mb-4">Welcome back, {user?.full_name || 'Learner'}!</h1>
 
       <div className="grid grid-cols-3 gap-3 mb-8">
-        <StatCard value={active.length} label="Active Courses" />
-        <StatCard value={completed.length} label="Completed" />
-        <StatCard value={certificates.length} label="Certificates" />
+        <StatCard value={totalEnrolled} label="Total Enrolled" />
+        <StatCard value={totalCompleted} label="Completed" />
+        <StatCard value={totalCertificates} label="Certificates" />
       </div>
 
       <section className="mb-8">
         <h2 className="font-semibold text-navy mb-3">Continue Learning</h2>
-        {active.length === 0 ? (
+        {enrollments.length === 0 ? (
           <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center text-sm text-gray-500">
             You have not enrolled in any courses yet.
             <div className="mt-3">
@@ -37,66 +63,24 @@ export default function StudentDashboard() {
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 gap-4">
-            {active.map((enr) => {
-              const course = COURSES.find((c) => c.id === enr.course_id)
-              if (!course) return null
-              return (
-                <div key={course.id} className="border border-gray-100 rounded-lg overflow-hidden shadow-card bg-white">
-                  <img src={course.thumbnail} alt={course.title} className="h-24 w-full object-cover" />
-                  <div className="p-3">
-                    <p className="font-semibold text-navy text-sm mb-1">{course.title}</p>
-                    <ProgressBar percent={enr.progress_percent} />
-                    <Link
-                      to={`/learn/${course.id}`}
-                      className="inline-block mt-3 bg-navy text-white text-xs font-semibold px-4 py-2 rounded-md"
-                    >
-                      Continue
-                    </Link>
+            {enrollments.map((enr) => (
+              <div key={enr.course} className="border border-gray-100 rounded-lg overflow-hidden shadow-card bg-white">
+                <div className="p-3">
+                  <p className="font-semibold text-navy text-sm mb-1">{enr.course_title}</p>
+                  <ProgressBar percent={enr.progress_percentage} />
+                  <div className="flex items-center gap-2 mt-3">
+                    <Link to={`/learn/${enr.course}`} className="inline-block bg-navy text-white text-xs font-semibold px-4 py-2 rounded-md">Continue</Link>
+                    {enr.is_completed && (
+                      <Link to="/certificates" className="inline-block bg-white border border-gray-200 text-xs px-3 py-1 rounded-md">View Certificate</Link>
+                    )}
                   </div>
                 </div>
-              )
-            })}
+              </div>
+            ))}
           </div>
         )}
       </section>
 
-      <section className="mb-8">
-        <h2 className="font-semibold text-navy mb-3">Recent Activity</h2>
-        <div className="space-y-2">
-          {enrollments.length === 0 && <p className="text-sm text-gray-400">Nothing yet — your activity will show up here.</p>}
-          {completed.map((enr) => {
-            const course = COURSES.find((c) => c.id === enr.course_id)
-            return (
-              <div key={enr.course_id} className="flex items-center gap-3 bg-white border border-gray-100 rounded-lg px-4 py-3">
-                <span className="text-green-600">✓</span>
-                <div>
-                  <p className="text-sm font-medium text-navy">Completed "{course?.title}"</p>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </section>
-
-      <section>
-        <h2 className="font-semibold text-navy mb-3">Recommended for You</h2>
-        <div className="grid sm:grid-cols-2 gap-4">
-          {recommended.map((course) => (
-            <div key={course.id} className="border border-gray-100 rounded-lg overflow-hidden shadow-card bg-white">
-              <img src={course.thumbnail} alt={course.title} className="h-24 w-full object-cover" />
-              <div className="p-3">
-                <p className="font-semibold text-navy text-sm mb-2">{course.title}</p>
-                <Link
-                  to={`/courses/${course.id}`}
-                  className="inline-block bg-navy text-white text-xs font-semibold px-4 py-2 rounded-md"
-                >
-                  Enroll Now
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
     </div>
   )
 }

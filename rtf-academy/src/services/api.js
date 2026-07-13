@@ -5,7 +5,7 @@
 // always 404s at "/" for a Django app — that's expected, nothing is routed
 // at the root. Check your Django urls.py for the actual prefix (commonly
 // /api/ or /api/v1/) and put THAT in VITE_API_BASE_URL, e.g.:
-//   VITE_API_BASE_URL=https://rtf-academy-backend.onrender.com/api/v1
+//   VITE_API_BASE_URL=http://localhost:8000/api/v1
 //
 // Also note: Render's free tier spins down idle services. The first request
 // after inactivity can take 30-60s while it wakes up — that's not a bug.
@@ -20,6 +20,16 @@ class ApiError extends Error {
   }
 }
 
+let activeToken = null
+
+export function setApiAuthToken(token) {
+  activeToken = token || null
+}
+
+export function clearApiAuthToken() {
+  activeToken = null
+}
+
 async function request(path, { method = 'GET', body, token, params } = {}) {
   if (!BASE_URL) {
     throw new ApiError('VITE_API_BASE_URL is not set — see .env.example', 0, null)
@@ -27,8 +37,9 @@ async function request(path, { method = 'GET', body, token, params } = {}) {
   const url = new URL(path.replace(/^\//, ''), BASE_URL.endsWith('/') ? BASE_URL : BASE_URL + '/')
   if (params) Object.entries(params).forEach(([k, v]) => v != null && url.searchParams.set(k, v))
 
+  const resolvedToken = token ?? activeToken
   const headers = { 'Content-Type': 'application/json' }
-  if (token) headers.Authorization = `Bearer ${token}`
+  if (resolvedToken) headers.Authorization = `Bearer ${resolvedToken}`
 
   const res = await fetch(url.toString(), {
     method,
@@ -58,6 +69,8 @@ export const api = {
   // Courses — supports both ID formats (UUID string or integer)
   listCourses: (params) => request('/courses/', { params }),
   getCourse: (id) => request(`/courses/${id}/`),
+  createCourse: (payload, token) => request('/courses/', { method: 'POST', body: payload, token }),
+  deleteCourse: (id, token) => request(`/courses/${id}/`, { method: 'DELETE', token }),
   getLessonDetail: (lessonId, token) => request(`/courses/lessons/${lessonId}/`, { token }),
 
   // Enrollments — Django REST router generates list/create/retrieve/update/delete
@@ -79,6 +92,7 @@ export const api = {
   generateCertificate: (courseId, token) => request(`/certificates/generate/${courseId}/`, { method: 'POST', token }),
   myCertificates: (token) => request('/certificates/my/', { token }),
   verifyCertificate: (code) => request(`/certificates/verify/${code}/`),
+  downloadCertificate: (certId, token) => request(`/certificates/download/${certId}/`, { token }),
 
   // Admin — mirrors /admin/*
   adminStats: (token) => request('/admin/stats/', { token }),
