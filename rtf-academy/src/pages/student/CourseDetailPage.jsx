@@ -138,3 +138,5 @@ export default function CourseDetailPage() {
     </div>
   )
 }
+
+//triggering rebuild
