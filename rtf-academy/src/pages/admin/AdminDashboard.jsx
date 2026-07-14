@@ -5,6 +5,37 @@ import { api } from '../../services/api.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { ADMIN_STATS } from '../../data/mockData.js'
 import ProgressBar from '../../components/common/ProgressBar.jsx'
+import { api } from '../../services/api.js'
+import { COURSES as MOCK_COURSES } from '../../data/mockData'
+
+function AdminCourseForm({ onCreate }) {
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [thumbnail, setThumbnail] = useState('')
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    const payload = { title, description, thumbnail_url: thumbnail }
+    try {
+      const res = await api.createCourse(payload).catch(() => null)
+      if (res) onCreate(res)
+      else onCreate({ id: Date.now(), title, description, thumbnail_url: thumbnail })
+      setTitle(''); setDescription(''); setThumbnail('')
+    } catch (err) {
+      console.error('Create course failed', err)
+      alert('Create failed')
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-2">
+      <input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full border rounded px-2 py-1" />
+      <input placeholder="Thumbnail URL" value={thumbnail} onChange={(e) => setThumbnail(e.target.value)} className="w-full border rounded px-2 py-1" />
+      <textarea placeholder="Short description" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full border rounded px-2 py-1" />
+      <button className="bg-navy text-white px-3 py-1 rounded text-sm">Create Course</button>
+    </form>
+  )
+}
 
 export default function AdminDashboard() {
   const { user, getToken } = useAuth()

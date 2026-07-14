@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useProgress } from '../../context/ProgressContext.jsx'
 import StatCard from '../../components/common/StatCard.jsx'
@@ -29,7 +30,7 @@ export default function StudentDashboard() {
 
       <section className="mb-8">
         <h2 className="font-semibold text-navy mb-3">Continue Learning</h2>
-        {active.length === 0 ? (
+        {enrollments.length === 0 ? (
           <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center text-sm text-gray-500">
             You have not enrolled in any courses yet.
             <div className="mt-3">

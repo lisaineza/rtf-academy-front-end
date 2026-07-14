@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../services/api.js'
 import { useAuth } from '../../context/AuthContext.jsx'
-import { useProgress } from '../../context/ProgressContext.jsx'
+import { api } from '../../services/api.js'
+import { COURSES as MOCK_COURSES } from '../../data/mockData'
 import Button from '../../components/common/Button.jsx'
 
 export default function CourseDetailPage() {
