@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Bar, BarChart, ResponsiveContainer, XAxis } from 'recharts'
-import { useState, useEffect } from 'react'
+import { api } from '../../services/api.js'
 import { useAuth } from '../../context/AuthContext.jsx'
-import { ADMIN_STATS } from '../../data/mockData'
+import { ADMIN_STATS } from '../../data/mockData.js'
 import ProgressBar from '../../components/common/ProgressBar.jsx'
 import { api } from '../../services/api.js'
 import { COURSES as MOCK_COURSES } from '../../data/mockData'
@@ -35,60 +37,97 @@ function AdminCourseForm({ onCreate }) {
   )
 }
 
-const statusColors = {
-  Complete: 'bg-green-100 text-green-700',
-  'In Progress': 'bg-blue-100 text-blue-700',
-  Failed: 'bg-red-100 text-red-700',
-}
-
 export default function AdminDashboard() {
-  const { user } = useAuth()
-  const [courses, setCourses] = useState([])
+  const { user, getToken } = useAuth()
+  const [stats, setStats]   = useState(null)
+  const [report, setReport] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError]   = useState('')
 
   useEffect(() => {
-    let mounted = true
     async function load() {
       try {
-        const data = await api.listCourses().catch(() => [])
-        if (!mounted) return
-        if (Array.isArray(data) && data.length > 0) setCourses(data)
-        else setCourses(MOCK_COURSES.map((c) => ({ id: String(c.id), title: c.title, description: c.description, thumbnail_url: c.thumbnail })))
-      } catch (err) {
-        console.error('Failed to load courses for admin', err)
-        if (mounted) setCourses(MOCK_COURSES.map((c) => ({ id: String(c.id), title: c.title, description: c.description, thumbnail_url: c.thumbnail })))
+        const token = await getToken()
+        const [s, r] = await Promise.all([
+          api.adminStats(token),
+          api.adminEnrollmentReport(token),
+        ])
+        setStats(s)
+        setReport(r)
+      } catch (e) {
+        setError(e.message || 'Failed to load admin data.')
       }
+      setLoading(false)
     }
     load()
-    return () => { mounted = false }
-  }, [])
+  }, [getToken])
+
+  if (loading) return <p className="text-center py-16 text-gray-400">Loading dashboard…</p>
+  if (error)   return <p className="text-center py-16 text-red-500">{error}</p>
+
+  const totalLearners   = stats?.learners?.students       ?? 0
+  const activeCourses   = stats?.courses?.published       ?? 0
+  const completionRate  = stats && stats.learners?.enrollments > 0
+    ? Math.round((stats.learners.completed_enrollments / stats.learners.enrollments) * 100)
+    : 0
+  const certsIssued     = stats?.learners?.certificates_issued ?? 0
+  const avgScore = stats?.assessments?.average_score
+    ? Math.round(stats.assessments.average_score)
+    : 0
+
+  const courseRows = report?.results || []
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-xl font-bold text-navy mb-6">Hi {user?.full_name?.split(' ')[0] || 'Admin'}</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-xl font-bold text-navy">Hi {user?.full_name?.split(' ')[0] || 'Admin'}</h1>
+        <Link to="/admin/courses" className="text-xs bg-navy text-white font-semibold px-4 py-2 rounded-md">
+          + Manage Courses
+        </Link>
+      </div>
 
       <p className="font-semibold text-navy mb-3">Platform Overview</p>
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card">
-          <p className="text-2xl font-bold text-navy">{ADMIN_STATS.total_users}</p>
-          <p className="text-xs text-green-600">{ADMIN_STATS.total_users_growth}</p>
+          <p className="text-2xl font-bold text-navy">{totalLearners}</p>
           <p className="text-xs text-gray-500">Total Learners</p>
         </div>
         <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card">
-          <p className="text-2xl font-bold text-navy">{ADMIN_STATS.active_courses}</p>
-          <p className="text-xs text-gray-500">Active courses</p>
+          <p className="text-2xl font-bold text-navy">{activeCourses}</p>
+          <p className="text-xs text-gray-500">Active Courses</p>
         </div>
         <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card">
-          <p className="text-2xl font-bold text-navy">{ADMIN_STATS.average_completion_rate}%</p>
-          <p className="text-xs text-green-600">{ADMIN_STATS.average_completion_growth}</p>
-          <p className="text-xs text-gray-500">Avg completion</p>
+          <p className="text-2xl font-bold text-navy">{completionRate}%</p>
+          <p className="text-xs text-gray-500">Avg Completion Rate</p>
         </div>
         <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card">
-          <p className="text-2xl font-bold text-navy">{ADMIN_STATS.certificates_issued}</p>
-          <p className="text-xs text-green-600">{ADMIN_STATS.certificates_growth}</p>
-          <p className="text-xs text-gray-500">Certificates</p>
+          <p className="text-2xl font-bold text-navy">{certsIssued}</p>
+          <p className="text-xs text-gray-500">Certificates Issued</p>
         </div>
       </div>
 
+      {stats && (
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card col-span-2">
+            <p className="text-sm font-semibold text-navy mb-2">Content Overview</p>
+            <div className="grid grid-cols-4 gap-2 text-center">
+              {[
+                { label: 'Modules',   value: stats.content?.modules   ?? 0 },
+                { label: 'Lessons',   value: stats.content?.lessons   ?? 0 },
+                { label: 'Quizzes',   value: stats.content?.quizzes   ?? 0 },
+                { label: 'Avg Score', value: `${avgScore}%` },
+              ].map((item) => (
+                <div key={item.label} className="bg-gray-50 rounded-lg py-2">
+                  <p className="text-lg font-bold text-navy">{item.value}</p>
+                  <p className="text-xs text-gray-400">{item.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Monthly enrolments chart — uses mock data (no backend endpoint yet) */}
       <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card mb-6">
         <div className="flex justify-between items-center mb-2">
           <p className="font-semibold text-navy text-sm">Monthly Enrolments</p>
@@ -102,62 +141,59 @@ export default function AdminDashboard() {
         </ResponsiveContainer>
       </div>
 
-      <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card mb-6">
-        <p className="font-semibold text-navy text-sm mb-3">Course Performance</p>
-        <div className="space-y-3">
-          {ADMIN_STATS.course_performance.map((c) => (
-            <div key={c.title}>
-              <div className="flex justify-between text-xs text-gray-600 mb-1">
-                <span>{c.title}</span><span>{c.completion}%</span>
-              </div>
-              <ProgressBar percent={c.completion} color="bg-blue-700" />
-            </div>
-          ))}
-        </div>
-      </div>
-
-        <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card mt-6">
-          <div className="flex justify-between items-center mb-3">
-            <p className="font-semibold text-navy text-sm">Manage Courses</p>
-          </div>
-          <div className="mb-4">
-            <AdminCourseForm onCreate={(c) => setCourses((s) => [c, ...s])} />
-          </div>
-          <div className="space-y-2">
-            {courses.map((c) => (
-              <div key={c.id} className="flex items-center justify-between bg-white border border-gray-100 rounded px-3 py-2">
-                <div>
-                  <p className="text-sm font-medium text-navy">{c.title}</p>
-                  <p className="text-xs text-gray-500">{c.description}</p>
+      {/* Per-course performance from real API */}
+      {courseRows.length > 0 && (
+        <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card mb-6">
+          <p className="font-semibold text-navy text-sm mb-3">Course Performance</p>
+          <div className="space-y-3">
+            {courseRows.map((c) => (
+              <div key={c.course_id}>
+                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                  <span className="truncate w-3/4">{c.title}</span>
+                  <span>{Math.round(c.average_progress || 0)}%</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={async () => {
-                    if (!confirm('Delete this course?')) return
-                    try {
-                      await api.deleteCourse(c.id).catch(() => null)
-                      setCourses((s) => s.filter((x) => String(x.id) !== String(c.id)))
-                    } catch (err) { console.error('Delete failed', err); alert('Delete failed') }
-                  }} className="text-sm text-red-600">Delete</button>
-                </div>
+                <ProgressBar percent={Math.round(c.average_progress || 0)} color="bg-navy" />
               </div>
             ))}
           </div>
         </div>
+      )}
 
-      <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card">
-        <p className="font-semibold text-navy text-sm mb-3">Recent Learner Activity</p>
-        <div className="space-y-3">
-          {ADMIN_STATS.recent_activity.map((a) => (
-            <div key={a.name} className="flex items-center justify-between text-sm">
-              <div>
-                <p className="font-medium text-navy">{a.name}</p>
-                <p className="text-xs text-gray-500">{a.course} - {a.progress}%</p>
-              </div>
-              <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusColors[a.status]}`}>{a.status}</span>
-            </div>
-          ))}
+      {/* Enrollment report table */}
+      {courseRows.length > 0 && (
+        <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card">
+          <p className="font-semibold text-navy text-sm mb-3">Enrollment Report</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-gray-400 border-b border-gray-100">
+                  <th className="text-left pb-2">Course</th>
+                  <th className="text-center pb-2">Enrolled</th>
+                  <th className="text-center pb-2">Completed</th>
+                  <th className="text-center pb-2">Certs</th>
+                </tr>
+              </thead>
+              <tbody>
+                {courseRows.map((c) => (
+                  <tr key={c.course_id} className="border-b border-gray-50">
+                    <td className="py-2 text-navy font-medium truncate max-w-28">{c.title}</td>
+                    <td className="py-2 text-center">{c.enrollments}</td>
+                    <td className="py-2 text-center">{c.completed_enrollments}</td>
+                    <td className="py-2 text-center">{c.certificates_issued}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {report?.summary && (
+            <p className="text-xs text-gray-400 mt-3">
+              Platform average progress: {Math.round(report.summary.average_progress || 0)}%
+            </p>
+          )}
         </div>
-      </div>
+      )}
     </div>
   )
 }
+
+//triggering rebuild

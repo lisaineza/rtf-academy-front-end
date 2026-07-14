@@ -1,55 +1,31 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext.jsx'
-import { api } from '../../services/api.js'
+import { useProgress } from '../../context/ProgressContext.jsx'
 import StatCard from '../../components/common/StatCard.jsx'
 import ProgressBar from '../../components/common/ProgressBar.jsx'
 
+function courseId(e) {
+  return e.course && typeof e.course === 'object' ? e.course.id : e.course
+}
+
 export default function StudentDashboard() {
   const { user } = useAuth()
-  const [enrollments, setEnrollments] = useState([])
-  const [certs, setCerts] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { enrollments, certificates } = useProgress()
 
-  useEffect(() => {
-    let mounted = true
-    async function load() {
-      setLoading(true)
-      try {
-        const me = await api.me()
-        if (!mounted) return
-
-        const enrolls = await api.listEnrollments()
-        if (!mounted) return
-        setEnrollments(enrolls)
-
-        const myCerts = await api.myCertificates()
-        if (!mounted) return
-        setCerts(myCerts)
-      } catch (err) {
-        console.error('Dashboard load failed', err)
-      } finally {
-        if (mounted) setLoading(false)
-      }
-    }
-    load()
-    return () => {
-      mounted = false
-    }
-  }, [])
-
-  const totalEnrolled = enrollments.length
-  const totalCompleted = enrollments.filter((e) => e.is_completed).length
-  const totalCertificates = certs.length
+  const active    = enrollments.filter((e) => !e.is_completed)
+  const completed = enrollments.filter((e) => e.is_completed)
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-xl font-bold text-navy mb-4">Welcome back, {user?.full_name || 'Learner'}!</h1>
+      <h1 className="text-xl font-bold text-navy mb-4">
+        Hi, {user?.full_name?.split(' ')[0] || 'Learner'}!
+      </h1>
 
       <div className="grid grid-cols-3 gap-3 mb-8">
-        <StatCard value={totalEnrolled} label="Total Enrolled" />
-        <StatCard value={totalCompleted} label="Completed" />
-        <StatCard value={totalCertificates} label="Certificates" />
+        <StatCard value={active.length}       label="Active Courses" />
+        <StatCard value={completed.length}    label="Completed" />
+        <StatCard value={certificates.length} label="Certificates" />
       </div>
 
       <section className="mb-8">
@@ -63,17 +39,22 @@ export default function StudentDashboard() {
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 gap-4">
-            {enrollments.map((enr) => (
-              <div key={enr.course} className="border border-gray-100 rounded-lg overflow-hidden shadow-card bg-white">
+            {active.map((enr) => (
+              <div key={enr.id} className="border border-gray-100 rounded-lg overflow-hidden shadow-card bg-white">
+                <div className="h-20 bg-navy flex items-center justify-center px-3">
+                  <p className="text-white text-xs font-medium text-center">
+                    {enr.course_title || (enr.course && typeof enr.course === 'object' ? enr.course.title : 'Course')}
+                  </p>
+                </div>
                 <div className="p-3">
-                  <p className="font-semibold text-navy text-sm mb-1">{enr.course_title}</p>
-                  <ProgressBar percent={enr.progress_percentage} />
-                  <div className="flex items-center gap-2 mt-3">
-                    <Link to={`/learn/${enr.course}`} className="inline-block bg-navy text-white text-xs font-semibold px-4 py-2 rounded-md">Continue</Link>
-                    {enr.is_completed && (
-                      <Link to="/certificates" className="inline-block bg-white border border-gray-200 text-xs px-3 py-1 rounded-md">View Certificate</Link>
-                    )}
-                  </div>
+                  <ProgressBar percent={enr.progress_percentage || 0} />
+                  <p className="text-xs text-gray-400 mt-1 mb-2">{enr.progress_percentage || 0}% complete</p>
+                  <Link
+                    to={`/learn/${courseId(enr)}`}
+                    className="inline-block bg-navy text-white text-xs font-semibold px-4 py-2 rounded-md"
+                  >
+                    Continue
+                  </Link>
                 </div>
               </div>
             ))}
@@ -81,6 +62,43 @@ export default function StudentDashboard() {
         )}
       </section>
 
+      {completed.length > 0 && (
+        <section className="mb-8">
+          <h2 className="font-semibold text-navy mb-3">Completed Courses</h2>
+          <div className="space-y-2">
+            {completed.map((enr) => (
+              <div key={enr.id} className="flex items-center gap-3 bg-white border border-gray-100 rounded-lg px-4 py-3">
+                <span className="text-green-600 text-lg">✓</span>
+                <div>
+                  <p className="text-sm font-medium text-navy">
+                    {enr.course_title || (enr.course && typeof enr.course === 'object' ? enr.course.title : 'Course')}
+                  </p>
+                  <Link to="/certificates" className="text-xs text-navy underline">View Certificate</Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {certificates.length > 0 && (
+        <section>
+          <h2 className="font-semibold text-navy mb-3">My Certificates</h2>
+          <div className="space-y-2">
+            {certificates.map((cert) => (
+              <div key={cert.id} className="flex items-center justify-between bg-white border border-gray-100 rounded-lg px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-navy">
+                    {cert.course?.title || 'Certificate'}
+                  </p>
+                  <p className="text-xs text-gray-400">{cert.verification_code}</p>
+                </div>
+                <Link to="/certificates" className="text-xs text-navy underline">View</Link>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   )
 }

@@ -1,123 +1,125 @@
+
 import { createContext, useContext, useEffect, useState } from 'react'
-import { clearApiAuthToken, setApiAuthToken } from '../services/api.js'
-import { auth, firebaseEnabled, getFirebaseToken, googleProvider } from '../services/firebase.js'
-import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+} from 'firebase/auth'
+import { auth, googleProvider, firebaseEnabled } from '../services/firebase.js'
+import { api } from '../services/api.js'
 
 const AuthContext = createContext(null)
-const STORAGE_KEY = 'rtf_academy_user'
 
-function buildUserRecord({ email, full_name, role = 'student' }) {
-  return {
-    uid: 'local_' + Date.now(),
-    email,
-    full_name,
-    role,
-    created_at: new Date().toISOString(),
-  }
+// ─── Demo mode (Firebase not configured) ─────────────────────────────────────
+// Used during development before Firebase credentials are set up.
+// An email containing "admin" will be given the Admin role; anything else gets Student.
+function makeDemoUser(email, full_name = '') {
+  const role = email.toLowerCase().includes('admin') ? 'admin' : 'student'
+  return { uid: 'demo-' + email, email, full_name: full_name || email.split('@')[0], role, is_active: true, created_at: new Date().toISOString(), _demo: true }
 }
 
+// ─── Provider ─────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
+  const [user, setUser]       = useState(null)
   const [loading, setLoading] = useState(true)
-  const [backendReachable] = useState(true)
-  const [token, setTokenState] = useState(null)
 
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      setUser(JSON.parse(stored))
-    }
-    setLoading(false)
-  }, [])
-
-  useEffect(() => {
-    if (!firebaseEnabled || !auth) return undefined
-
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (!firebaseUser) {
-        setTokenState(null)
-        clearApiAuthToken()
-        return
+  // Sync a Firebase user with the Django backend (JIT provisioning).
+  async function syncWithBackend(firebaseUser) {
+    try {
+      const token = await firebaseUser.getIdToken()
+      const profile = await api.me(token)
+      const merged = {
+        uid:        profile.uid,
+        email:      profile.email,
+        full_name:  profile.full_name,
+        role:       (profile.role || 'Student').toLowerCase(),
+        created_at: profile.created_at,
+        is_active:  profile.is_active,
+        _firebaseUser: firebaseUser,
       }
+      setUser(merged)
+      return merged
+    } catch (err) {
+      console.error('[RTF] Backend sync failed:', err)
+      return null
+    }
+  }
 
-      const nextToken = await getFirebaseToken()
-      setTokenState(nextToken)
-      if (nextToken) {
-        setApiAuthToken(nextToken)
+  useEffect(() => {
+    if (!auth) {
+      // Firebase not configured — restore demo session from sessionStorage
+      try {
+        const saved = sessionStorage.getItem('rtf_demo_user')
+        if (saved) setUser(JSON.parse(saved))
+      } catch {}
+      setLoading(false)
+      return
+    }
+    const unsub = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        await syncWithBackend(fbUser)
       } else {
-        clearApiAuthToken()
+        setUser(null)
       }
-
-      const mappedUser = {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        full_name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Student',
-        role: firebaseUser.email?.includes('admin') ? 'admin' : 'student',
-        created_at: new Date().toISOString(),
-        photoURL: firebaseUser.photoURL,
-      }
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(mappedUser))
-      setUser(mappedUser)
+      setLoading(false)
     })
-
-    return unsubscribe
+    return unsub
   }, [])
 
-  async function persistSession(nextUser, nextToken = null) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser))
-    setUser(nextUser)
-    setTokenState(nextToken)
-    if (nextToken) {
-      setApiAuthToken(nextToken)
-    } else {
-      clearApiAuthToken()
+  // ─── register ───────────────────────────────────────────────────────────────
+  async function register({ full_name, email, password }) {
+    if (!auth) {
+      // Demo mode
+      const demo = makeDemoUser(email, full_name)
+      setUser(demo)
+      sessionStorage.setItem('rtf_demo_user', JSON.stringify(demo))
+      return demo
     }
-    return nextUser
+    const cred    = await createUserWithEmailAndPassword(auth, email, password)
+    const profile = await syncWithBackend(cred.user)
+    if (full_name) {
+      const token = await cred.user.getIdToken()
+      await api.updateProfile({ full_name }, token).catch(() => {})
+      setUser((prev) => (prev ? { ...prev, full_name } : prev))
+    }
+    return profile
   }
 
-  async function register({ full_name, email }) {
-    const newUser = buildUserRecord({ email, full_name, role: 'student' })
-    const nextToken = await getFirebaseToken()
-    return persistSession(newUser, nextToken)
+  // ─── login ──────────────────────────────────────────────────────────────────
+  async function login({ email, password }) {
+    if (!auth) {
+      // Demo mode — password not checked
+      const demo = makeDemoUser(email)
+      setUser(demo)
+      sessionStorage.setItem('rtf_demo_user', JSON.stringify(demo))
+      return demo
+    }
+    const cred = await signInWithEmailAndPassword(auth, email, password)
+    return syncWithBackend(cred.user)
   }
 
-  async function login({ email }) {
-    const existing = localStorage.getItem(STORAGE_KEY)
-    const parsed = existing ? JSON.parse(existing) : null
-    const loggedIn = parsed && parsed.email === email
-      ? parsed
-      : buildUserRecord({
-          email,
-          full_name: email.split('@')[0],
-          role: email.includes('admin') ? 'admin' : 'student',
-        })
-    const nextToken = await getFirebaseToken()
-    return persistSession(loggedIn, nextToken)
-  }
-
+  // ─── loginWithGoogle ─────────────────────────────────────────────────────────
   async function loginWithGoogle() {
-    if (!firebaseEnabled || !auth || !googleProvider) {
-      throw new Error('Google sign-in is unavailable without Firebase config.')
+    if (!auth || !googleProvider) {
+      throw new Error('Firebase is not configured. Set VITE_FIREBASE_* in your .env file.')
     }
-
-    const result = await signInWithPopup(auth, googleProvider)
-    const firebaseUser = result.user
-    const nextToken = await firebaseUser.getIdToken()
-    const signedInUser = {
-      uid: firebaseUser.uid,
-      email: firebaseUser.email,
-      full_name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Student',
-      role: firebaseUser.email?.includes('admin') ? 'admin' : 'student',
-      created_at: new Date().toISOString(),
-      photoURL: firebaseUser.photoURL,
-    }
-
-    return persistSession(signedInUser, nextToken)
+    const cred = await signInWithPopup(auth, googleProvider)
+    return syncWithBackend(cred.user)
   }
 
+  // ─── resetPassword ───────────────────────────────────────────────────────────
+  async function resetPassword(email) {
+    if (!auth) throw new Error('Firebase is not configured.')
+    return sendPasswordResetEmail(auth, email)
+  }
+
+  // ─── logout ──────────────────────────────────────────────────────────────────
   async function logout() {
-    localStorage.removeItem(STORAGE_KEY)
+    if (auth) await signOut(auth)
+    sessionStorage.removeItem('rtf_demo_user')
     setUser(null)
     setTokenState(null)
     clearApiAuthToken()
@@ -126,25 +128,17 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // ─── getToken ────────────────────────────────────────────────────────────────
+  // Returns a real Firebase ID token, or null in demo mode.
+  // API calls made with null token will fail if the backend requires auth —
+  // configure Firebase for a fully working integration.
   async function getToken() {
-    if (!firebaseEnabled || !auth?.currentUser) {
-      return token
-    }
-
-    const nextToken = await getFirebaseToken()
-    setTokenState(nextToken)
-    if (nextToken) {
-      setApiAuthToken(nextToken)
-    } else {
-      clearApiAuthToken()
-    }
-    return nextToken
+    if (!auth?.currentUser) return null
+    return auth.currentUser.getIdToken()
   }
 
   return (
-    <AuthContext.Provider
-      value={{ user, loading, register, login, loginWithGoogle, logout, getToken, firebaseEnabled, backendReachable, token }}
-    >
+    <AuthContext.Provider value={{ user, loading, register, login, loginWithGoogle, logout, resetPassword, getToken, firebaseEnabled }}>
       {children}
     </AuthContext.Provider>
   )
@@ -152,6 +146,6 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider')
+  if (!ctx) throw new Error('useAuth must be inside AuthProvider')
   return ctx
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { COURSES } from '../../data/mockData'
+import { api } from '../../services/api.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useProgress } from '../../context/ProgressContext.jsx'
 import Button from '../../components/common/Button.jsx'
@@ -8,45 +8,81 @@ import logo from '../../assets/logo.png'
 
 export default function CourseCompletePage() {
   const { id } = useParams()
-  const course = COURSES.find((c) => c.id === Number(id))
-  const { user } = useAuth()
-  const { getEnrollment, generateCertificate } = useProgress()
+  const { user, getToken } = useAuth()
+  const { certificates } = useProgress()
   const [cert, setCert] = useState(null)
+  const [course, setCourse] = useState(null)
+  const [copyMsg, setCopyMsg] = useState('')
 
   useEffect(() => {
-    const enr = getEnrollment(Number(id))
-    if (enr?.certificate) {
-      setCert(enr.certificate)
-    } else if (enr?.progress_percent >= 100) {
-      setCert(generateCertificate(Number(id), user?.full_name || 'Learner'))
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
+    // Find cert from the cached list first
+    const found = certificates.find((c) => {
+      const cid = c.course?.id || c.course
+      return String(cid) === String(id)
+    })
+    if (found) setCert(found)
 
-  if (!course) return null
+    // Also fetch the course for title display
+    async function loadCourse() {
+      try {
+        const token = await getToken()
+        const data = await api.getCourse(id, token)
+        setCourse(data)
+        // If cert not in cache yet, search myCertificates directly
+        if (!found) {
+          const certs = await api.myCertificates(token)
+          const match = (Array.isArray(certs) ? certs : []).find((c) => {
+            const cid = c.course?.id || c.course
+            return String(cid) === String(id)
+          })
+          if (match) setCert(match)
+        }
+      } catch {}
+    }
+    loadCourse()
+  }, [id, getToken, certificates])
+
+  async function handleShare() {
+    if (!cert) return
+    const url = `${window.location.origin}/verify/${cert.verification_code}`
+    await navigator.clipboard.writeText(url).catch(() => {})
+    setCopyMsg('Link copied!')
+    setTimeout(() => setCopyMsg(''), 2000)
+  }
+
+  const courseTitle = course?.title || cert?.course?.title || 'this course'
+  const issuedDate  = cert?.issued_at ? new Date(cert.issued_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : ''
 
   return (
     <div className="max-w-md mx-auto px-4 py-10 text-center">
       <div className="bg-green-100 text-green-700 rounded-md py-3 mb-6 font-medium">
-        Course Completed Successfully!
+           Course Completed Successfully!
       </div>
 
-      <div className="border-2 border-gold rounded-lg p-6 bg-white shadow-card">
-        <img src={logo} alt="Raise Them Foundation" className="h-10 w-auto mx-auto mb-2" />
-        <p className="text-xs text-gray-400 mb-4">RTF E-learning Platform</p>
-        <p className="text-xs text-gray-500">This is To Certify That</p>
+      <div className="border-2 border-gold rounded-lg p-6 bg-white shadow-card mb-6">
+        <img src={logo} alt="Raise Them Foundation" className="h-10 w-auto mx-auto mb-1" />
+        <p className="text-xs text-gray-400 mb-4">RTF Academy · E-Learning Platform</p>
+
+        <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Certificate of Completion</p>
+        <p className="text-xs text-gray-500">This is to certify that</p>
         <p className="font-serif text-lg font-bold text-navy my-1">{user?.full_name || 'Learner'}</p>
-        <p className="text-xs text-gray-500">Has successfully finished the course</p>
-        <p className="font-semibold text-gold-dark my-2">{course.title}</p>
-        <p className="text-xs text-gray-400">
-          {course.modules.length} Modules, {course.duration_hours} Lessons · {cert?.issued_date}
-        </p>
+        <p className="text-xs text-gray-500 mb-1">has successfully completed</p>
+        <p className="font-semibold text-gold-dark my-1">{courseTitle}</p>
+
+        {issuedDate && <p className="text-xs text-gray-400 mt-2">{issuedDate}</p>}
+        {cert?.verification_code && (
+          <p className="text-xs text-gray-400 font-mono mt-1">{cert.verification_code}</p>
+        )}
       </div>
 
-      <div className="mt-6 space-y-3">
-        <Link to="/certificates"><Button className="w-full">View My Certificates</Button></Link>
+      <div className="space-y-3">
+        <Link to="/certificates"><Button className="w-full">View All Certificates</Button></Link>
+        <button onClick={handleShare} className="w-full border border-navy text-navy text-sm font-semibold py-2 rounded-md">
+          {copyMsg || 'Share Certificate Link'}
+        </button>
         <Link to="/dashboard"><Button variant="outline" className="w-full">Back to Dashboard</Button></Link>
       </div>
     </div>
   )
 }
+

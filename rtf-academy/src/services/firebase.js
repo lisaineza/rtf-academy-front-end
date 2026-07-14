@@ -1,37 +1,28 @@
-import { initializeApp, getApps } from 'firebase/app'
+import { initializeApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-const hasConfig = Object.values(firebaseConfig).every(Boolean)
-export const firebaseEnabled = hasConfig
+let auth = null
+let googleProvider = null
+let firebaseEnabled = false
 
-let firebaseApp = null
-let firebaseAuth = null
-let firebaseGoogleProvider = null
-
-if (hasConfig) {
-  firebaseApp = getApps().length ? getApps()[0] : initializeApp(firebaseConfig)
-  firebaseAuth = getAuth(firebaseApp)
-  firebaseGoogleProvider = new GoogleAuthProvider()
-}
-
-export const auth = firebaseAuth
-export const googleProvider = firebaseGoogleProvider
-
-export async function getFirebaseToken() {
-  if (!firebaseEnabled || !firebaseAuth?.currentUser) return null
-
-  try {
-    return await firebaseAuth.currentUser.getIdToken()
-  } catch {
-    return null
+try {
+  if (firebaseConfig.apiKey) {
+    const app = initializeApp(firebaseConfig)
+    auth = getAuth(app)
+    googleProvider = new GoogleAuthProvider()
+    firebaseEnabled = true
   }
+} catch (e) {
+  console.warn('[RTF] Firebase init failed — running in demo mode:', e.message)
 }
+
+export { auth, googleProvider, firebaseEnabled }
