@@ -1,28 +1,29 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useProgress } from '../../context/ProgressContext.jsx'
-import { COURSES } from '../../data/mockData'
 import StatCard from '../../components/common/StatCard.jsx'
 import ProgressBar from '../../components/common/ProgressBar.jsx'
 
+function courseId(e) {
+  return e.course && typeof e.course === 'object' ? e.course.id : e.course
+}
+
 export default function StudentDashboard() {
   const { user } = useAuth()
-  const { allEnrollments } = useProgress()
-  const enrollments = allEnrollments()
+  const { enrollments, certificates } = useProgress()
 
-  const active = enrollments.filter((e) => e.status === 'active')
-  const completed = enrollments.filter((e) => e.status === 'completed')
-  const certificates = enrollments.filter((e) => e.certificate)
-
-  const recommended = COURSES.filter((c) => !enrollments.some((e) => e.course_id === c.id)).slice(0, 2)
+  const active    = enrollments.filter((e) => !e.is_completed)
+  const completed = enrollments.filter((e) => e.is_completed)
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-xl font-bold text-navy mb-4">Hi, {user?.full_name?.split(' ')[0] || 'Learner'}!</h1>
+      <h1 className="text-xl font-bold text-navy mb-4">
+        Hi, {user?.full_name?.split(' ')[0] || 'Learner'}!
+      </h1>
 
       <div className="grid grid-cols-3 gap-3 mb-8">
-        <StatCard value={active.length} label="Active Courses" />
-        <StatCard value={completed.length} label="Completed" />
+        <StatCard value={active.length}       label="Active Courses" />
+        <StatCard value={completed.length}    label="Completed" />
         <StatCard value={certificates.length} label="Certificates" />
       </div>
 
@@ -37,66 +38,66 @@ export default function StudentDashboard() {
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 gap-4">
-            {active.map((enr) => {
-              const course = COURSES.find((c) => c.id === enr.course_id)
-              if (!course) return null
-              return (
-                <div key={course.id} className="border border-gray-100 rounded-lg overflow-hidden shadow-card bg-white">
-                  <img src={course.thumbnail} alt={course.title} className="h-24 w-full object-cover" />
-                  <div className="p-3">
-                    <p className="font-semibold text-navy text-sm mb-1">{course.title}</p>
-                    <ProgressBar percent={enr.progress_percent} />
-                    <Link
-                      to={`/learn/${course.id}`}
-                      className="inline-block mt-3 bg-navy text-white text-xs font-semibold px-4 py-2 rounded-md"
-                    >
-                      Continue
-                    </Link>
-                  </div>
+            {active.map((enr) => (
+              <div key={enr.id} className="border border-gray-100 rounded-lg overflow-hidden shadow-card bg-white">
+                <div className="h-20 bg-navy flex items-center justify-center px-3">
+                  <p className="text-white text-xs font-medium text-center">
+                    {enr.course_title || (enr.course && typeof enr.course === 'object' ? enr.course.title : 'Course')}
+                  </p>
                 </div>
-              )
-            })}
+                <div className="p-3">
+                  <ProgressBar percent={enr.progress_percentage || 0} />
+                  <p className="text-xs text-gray-400 mt-1 mb-2">{enr.progress_percentage || 0}% complete</p>
+                  <Link
+                    to={`/learn/${courseId(enr)}`}
+                    className="inline-block bg-navy text-white text-xs font-semibold px-4 py-2 rounded-md"
+                  >
+                    Continue
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </section>
 
-      <section className="mb-8">
-        <h2 className="font-semibold text-navy mb-3">Recent Activity</h2>
-        <div className="space-y-2">
-          {enrollments.length === 0 && <p className="text-sm text-gray-400">Nothing yet — your activity will show up here.</p>}
-          {completed.map((enr) => {
-            const course = COURSES.find((c) => c.id === enr.course_id)
-            return (
-              <div key={enr.course_id} className="flex items-center gap-3 bg-white border border-gray-100 rounded-lg px-4 py-3">
-                <span className="text-green-600">✓</span>
+      {completed.length > 0 && (
+        <section className="mb-8">
+          <h2 className="font-semibold text-navy mb-3">Completed Courses</h2>
+          <div className="space-y-2">
+            {completed.map((enr) => (
+              <div key={enr.id} className="flex items-center gap-3 bg-white border border-gray-100 rounded-lg px-4 py-3">
+                <span className="text-green-600 text-lg">✓</span>
                 <div>
-                  <p className="text-sm font-medium text-navy">Completed "{course?.title}"</p>
+                  <p className="text-sm font-medium text-navy">
+                    {enr.course_title || (enr.course && typeof enr.course === 'object' ? enr.course.title : 'Course')}
+                  </p>
+                  <Link to="/certificates" className="text-xs text-navy underline">View Certificate</Link>
                 </div>
               </div>
-            )
-          })}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
-      <section>
-        <h2 className="font-semibold text-navy mb-3">Recommended for You</h2>
-        <div className="grid sm:grid-cols-2 gap-4">
-          {recommended.map((course) => (
-            <div key={course.id} className="border border-gray-100 rounded-lg overflow-hidden shadow-card bg-white">
-              <img src={course.thumbnail} alt={course.title} className="h-24 w-full object-cover" />
-              <div className="p-3">
-                <p className="font-semibold text-navy text-sm mb-2">{course.title}</p>
-                <Link
-                  to={`/courses/${course.id}`}
-                  className="inline-block bg-navy text-white text-xs font-semibold px-4 py-2 rounded-md"
-                >
-                  Enroll Now
-                </Link>
+      {certificates.length > 0 && (
+        <section>
+          <h2 className="font-semibold text-navy mb-3">My Certificates</h2>
+          <div className="space-y-2">
+            {certificates.map((cert) => (
+              <div key={cert.id} className="flex items-center justify-between bg-white border border-gray-100 rounded-lg px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-navy">
+                    {cert.course?.title || 'Certificate'}
+                  </p>
+                  <p className="text-xs text-gray-400">{cert.verification_code}</p>
+                </div>
+                <Link to="/certificates" className="text-xs text-navy underline">View</Link>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   )
 }

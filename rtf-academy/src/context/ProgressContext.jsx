@@ -1,136 +1,87 @@
-import { createContext, useContext, useEffect, useState } from 'react'
-import { COURSES } from '../data/mockData'
+import { createContext, useContext, useCallback, useEffect, useState } from 'react'
+import { useAuth } from './AuthContext.jsx'
+import { api } from '../services/api.js'
 
 const ProgressContext = createContext(null)
-const STORAGE_KEY = 'rtf_academy_progress'
-
-// Shape per course_id:
-// {
-//   enrolled_at, progress_percent, completed_lessons: [], status,
-//   certificate: null | { code, issued_date },
-//   integrity_log: [{ type, timestamp }]   <- assessment integrity events
-// }
-
-function loadState() {
-  const raw = localStorage.getItem(STORAGE_KEY)
-  return raw ? JSON.parse(raw) : {}
-}
 
 export function ProgressProvider({ children }) {
-  const [state, setState] = useState(loadState)
+  const { user, getToken } = useAuth()
+  const [enrollments, setEnrollments] = useState([])
+  const [certificates, setCertificates] = useState([])
 
+  const refreshEnrollments = useCallback(async () => {
+    const token = await getToken()
+    if (!token) return
+    try {
+      const data = await api.listEnrollments(token)
+      setEnrollments(Array.isArray(data) ? data : [])
+    } catch (e) {
+      console.error('[RTF] refreshEnrollments failed:', e)
+    }
+  }, [getToken])
+
+  const refreshCertificates = useCallback(async () => {
+    const token = await getToken()
+    if (!token) return
+    try {
+      const data = await api.myCertificates(token)
+      setCertificates(Array.isArray(data) ? data : [])
+    } catch (e) {
+      console.error('[RTF] refreshCertificates failed:', e)
+    }
+  }, [getToken])
+
+  // Reload whenever the logged-in user changes
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  }, [state])
+    if (user) {
+      refreshEnrollments()
+      refreshCertificates()
+    } else {
+      setEnrollments([])
+      setCertificates([])
+    }
+  }, [user, refreshEnrollments, refreshCertificates])
 
-  // Mirrors POST /enrollments
-  function enroll(courseId) {
-    setState((prev) => {
-      if (prev[courseId]) return prev
-      return {
-        ...prev,
-        [courseId]: {
-          enrolled_at: new Date().toISOString(),
-          progress_percent: 0,
-          completed_lessons: [],
-          status: 'active',
-          certificate: null,
-          integrity_log: [],
-        },
-      }
-    })
+  function _getCourseId(e) {
+    // enrollment.course can be a UUID string or a nested object
+    return e.course && typeof e.course === 'object' ? e.course.id : e.course
+  }
+
+  async function enroll(courseId) {
+    const token = await getToken()
+    const data = await api.enroll(courseId, token)
+    await refreshEnrollments()
+    return data
   }
 
   function isEnrolled(courseId) {
-    return Boolean(state[courseId])
+    return enrollments.some((e) => String(_getCourseId(e)) === String(courseId))
   }
 
   function getEnrollment(courseId) {
-    return state[courseId] || null
+    return enrollments.find((e) => String(_getCourseId(e)) === String(courseId)) || null
   }
 
-  // Mirrors POST /progress/lesson
-  function completeLesson(courseId, lessonId) {
-    setState((prev) => {
-      const course = COURSES.find((c) => c.id === Number(courseId))
-      const totalLessons = course
-        ? course.modules.reduce((sum, m) => sum + (m.lessons?.length || 0), 0) || 1
-        : 1
-      const entry = prev[courseId] || {
-        enrolled_at: new Date().toISOString(),
-        progress_percent: 0,
-        completed_lessons: [],
-        status: 'active',
-        certificate: null,
-        integrity_log: [],
-      }
-      const completed = entry.completed_lessons.includes(lessonId)
-        ? entry.completed_lessons
-        : [...entry.completed_lessons, lessonId]
-      const progress_percent = Math.min(100, Math.round((completed.length / totalLessons) * 100))
-      return {
-        ...prev,
-        [courseId]: {
-          ...entry,
-          completed_lessons: completed,
-          progress_percent,
-          status: progress_percent >= 100 ? 'completed' : 'active',
-        },
-      }
-    })
+  async function completeLesson(lessonId) {
+    const token = await getToken()
+    const data = await api.completeLesson(lessonId, token)
+    await refreshEnrollments()
+    return data  // { lesson_id, progress_percentage, course_completed, certificate_earned? }
   }
 
-  // Mirrors POST /certificates/generate/{course_id}
-  function generateCertificate(courseId, learnerName) {
-    let cert = null
-    setState((prev) => {
-      const entry = prev[courseId]
-      if (!entry || entry.progress_percent < 100 || entry.certificate) return prev
-      cert = {
-        code: `RTF-2026-CERT-${String(courseId).padStart(3, '0')}-${Date.now().toString().slice(-4)}`,
-        issued_date: new Date().toISOString().slice(0, 10),
-        learner_name: learnerName,
-      }
-      return { ...prev, [courseId]: { ...entry, certificate: cert } }
-    })
-    return cert
-  }
+  function allEnrollments() { return enrollments }
 
-  // Records an assessment-integrity event (tab switch, paste attempt, etc.)
-  // so admins/facilitators have a light audit trail for that submission.
+  // Frontend-only integrity logging (no backend endpoint)
   function logIntegrityEvent(courseId, event) {
-    setState((prev) => {
-      const entry = prev[courseId]
-      if (!entry) return prev
-      return {
-        ...prev,
-        [courseId]: {
-          ...entry,
-          integrity_log: [...entry.integrity_log, { ...event, timestamp: new Date().toISOString() }],
-        },
-      }
-    })
-  }
-
-  function allEnrollments() {
-    return Object.entries(state).map(([courseId, data]) => ({
-      course_id: Number(courseId),
-      ...data,
-    }))
+    console.log('[Integrity]', courseId, event)
   }
 
   return (
-    <ProgressContext.Provider
-      value={{
-        enroll,
-        isEnrolled,
-        getEnrollment,
-        completeLesson,
-        generateCertificate,
-        logIntegrityEvent,
-        allEnrollments,
-      }}
-    >
+    <ProgressContext.Provider value={{
+      enrollments, certificates,
+      refreshEnrollments, refreshCertificates,
+      enroll, isEnrolled, getEnrollment, completeLesson, allEnrollments, logIntegrityEvent,
+    }}>
       {children}
     </ProgressContext.Provider>
   )
@@ -138,6 +89,6 @@ export function ProgressProvider({ children }) {
 
 export function useProgress() {
   const ctx = useContext(ProgressContext)
-  if (!ctx) throw new Error('useProgress must be used inside ProgressProvider')
+  if (!ctx) throw new Error('useProgress must be inside ProgressProvider')
   return ctx
 }
