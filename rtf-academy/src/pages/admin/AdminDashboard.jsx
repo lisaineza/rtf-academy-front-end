@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Bar, BarChart, ResponsiveContainer, XAxis } from 'recharts'
-import { api } from '../../services/api.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { ADMIN_STATS } from '../../data/mockData.js'
 import ProgressBar from '../../components/common/ProgressBar.jsx'
