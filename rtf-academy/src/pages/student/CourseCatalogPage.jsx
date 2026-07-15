@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../services/api.js'
@@ -39,7 +40,8 @@ export default function CourseCatalogPage() {
       ) : (
         <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-5">
           {courses.map((course) => (
-            <div key={course.id} className="border border-gray-100 rounded-lg overflow-hidden shadow-card bg-white">
+            // CHANGED: border-gray-100 is now border-[#D19A30]
+            <div key={course.id} className="border border-[#D19A30] rounded-lg overflow-hidden shadow-card bg-white">
               {course.thumbnail_url
                 ? <img src={course.thumbnail_url} alt={course.title} className="h-36 w-full object-cover" />
                 : <div className="h-36 bg-navy flex items-center justify-center text-white text-sm font-semibold px-3 text-center">{course.title}</div>
@@ -49,7 +51,8 @@ export default function CourseCatalogPage() {
                 <p className="text-xs text-gray-500 mb-1 line-clamp-2">{course.description}</p>
                 <p className="text-xs text-gray-400 mb-3">{course.module_count || 0} modules · {course.total_lessons || 0} lessons</p>
                 {isEnrolled(course.id) ? (
-                  <Link to={`/learn/${course.id}`} className="inline-block bg-green-700 text-white text-xs font-semibold px-4 py-2 rounded-md">
+                  // CHANGED: bg-green-700 text-white is now bg-[#D19A30] text-navy
+                  <Link to={`/learn/${course.id}`} className="inline-block bg-[#D19A30] text-navy hover:bg-opacity-90 transition-opacity text-xs font-semibold px-4 py-2 rounded-md">
                     Continue Learning
                   </Link>
                 ) : (

@@ -118,11 +118,9 @@ export function AuthProvider({ children }) {
 
   // ─── logout ──────────────────────────────────────────────────────────────────
   async function logout() {
-    if (auth) await signOut(auth)
     sessionStorage.removeItem('rtf_demo_user')
     setUser(null)
-    setTokenState(null)
-    clearApiAuthToken()
+
     if (firebaseEnabled && auth) {
       await signOut(auth)
     }

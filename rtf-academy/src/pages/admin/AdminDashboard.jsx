@@ -80,26 +80,23 @@ export default function AdminDashboard() {
     <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-navy">Hi {user?.full_name?.split(' ')[0] || 'Admin'}</h1>
-        <Link to="/admin/courses" className="text-xs bg-navy text-white font-semibold px-4 py-2 rounded-md">
-          + Manage Courses
-        </Link>
       </div>
 
       <p className="font-semibold text-navy mb-3">Platform Overview</p>
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card">
+        <div className="border border-[#D19A30]/40 rounded-lg p-4 bg-white shadow-card">
           <p className="text-2xl font-bold text-navy">{totalLearners}</p>
           <p className="text-xs text-gray-500">Total Learners</p>
         </div>
-        <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card">
+        <div className="border border-[#D19A30]/40 rounded-lg p-4 bg-white shadow-card">
           <p className="text-2xl font-bold text-navy">{activeCourses}</p>
           <p className="text-xs text-gray-500">Active Courses</p>
         </div>
-        <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card">
+        <div className="border border-[#D19A30]/40 rounded-lg p-4 bg-white shadow-card">
           <p className="text-2xl font-bold text-navy">{completionRate}%</p>
           <p className="text-xs text-gray-500">Avg Completion Rate</p>
         </div>
-        <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card">
+        <div className="border border-[#D19A30]/40 rounded-lg p-4 bg-white shadow-card">
           <p className="text-2xl font-bold text-navy">{certsIssued}</p>
           <p className="text-xs text-gray-500">Certificates Issued</p>
         </div>
@@ -107,7 +104,7 @@ export default function AdminDashboard() {
 
       {stats && (
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card col-span-2">
+          <div className="border border-[#D19A30]/40 rounded-lg p-4 bg-white shadow-card col-span-2">
             <p className="text-sm font-semibold text-navy mb-2">Content Overview</p>
             <div className="grid grid-cols-4 gap-2 text-center">
               {[
@@ -116,9 +113,10 @@ export default function AdminDashboard() {
                 { label: 'Quizzes',   value: stats.content?.quizzes   ?? 0 },
                 { label: 'Avg Score', value: `${avgScore}%` },
               ].map((item) => (
-                <div key={item.label} className="bg-gray-50 rounded-lg py-2">
+                // CHANGED: The background is now solid gold!
+                <div key={item.label} className="bg-[#D19A30] border border-[#D19A30] rounded-lg py-2 shadow-sm">
                   <p className="text-lg font-bold text-navy">{item.value}</p>
-                  <p className="text-xs text-gray-400">{item.label}</p>
+                  <p className="text-xs font-semibold text-navy">{item.label}</p>
                 </div>
               ))}
             </div>
@@ -126,8 +124,8 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Monthly enrolments chart — uses mock data (no backend endpoint yet) */}
-      <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card mb-6">
+      {/* Monthly enrolments chart */}
+      <div className="border border-[#D19A30]/40 rounded-lg p-4 bg-white shadow-card mb-6">
         <div className="flex justify-between items-center mb-2">
           <p className="font-semibold text-navy text-sm">Monthly Enrolments</p>
           <span className="text-xs text-gray-400">Last 6 Months</span>
@@ -135,14 +133,14 @@ export default function AdminDashboard() {
         <ResponsiveContainer width="100%" height={140}>
           <BarChart data={ADMIN_STATS.monthly_enrollments}>
             <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-            <Bar dataKey="enrollments" fill="#1e3a8a" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="enrollments" fill="#0A192F" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Per-course performance from real API */}
+      {/* Per-course performance */}
       {courseRows.length > 0 && (
-        <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card mb-6">
+        <div className="border border-[#D19A30]/40 rounded-lg p-4 bg-white shadow-card mb-6">
           <p className="font-semibold text-navy text-sm mb-3">Course Performance</p>
           <div className="space-y-3">
             {courseRows.map((c) => (
@@ -151,7 +149,7 @@ export default function AdminDashboard() {
                   <span className="truncate w-3/4">{c.title}</span>
                   <span>{Math.round(c.average_progress || 0)}%</span>
                 </div>
-                <ProgressBar percent={Math.round(c.average_progress || 0)} color="bg-navy" />
+                <ProgressBar percent={Math.round(c.average_progress || 0)} color="bg-[#D19A30]" />
               </div>
             ))}
           </div>
@@ -160,12 +158,12 @@ export default function AdminDashboard() {
 
       {/* Enrollment report table */}
       {courseRows.length > 0 && (
-        <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card">
+        <div className="border border-[#D19A30]/40 rounded-lg p-4 bg-white shadow-card">
           <p className="font-semibold text-navy text-sm mb-3">Enrollment Report</p>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-gray-400 border-b border-gray-100">
+                <tr className="text-gray-400 border-b border-[#D19A30]/20">
                   <th className="text-left pb-2">Course</th>
                   <th className="text-center pb-2">Enrolled</th>
                   <th className="text-center pb-2">Completed</th>
@@ -194,5 +192,3 @@ export default function AdminDashboard() {
     </div>
   )
 }
-
-//triggering rebuild

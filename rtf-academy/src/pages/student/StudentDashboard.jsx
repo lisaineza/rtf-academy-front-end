@@ -1,3 +1,4 @@
+
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext.jsx'
@@ -17,83 +18,83 @@ export default function StudentDashboard() {
   const completed = enrollments.filter((e) => e.is_completed)
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-xl font-bold text-navy mb-4">
+    <div className="animate-fade-in w-full">
+      {/* Header */}
+      <h1 className="text-2xl font-bold text-navy mb-6">
         Hi, {user?.full_name?.split(' ')[0] || 'Learner'}!
       </h1>
 
-      <div className="grid grid-cols-3 gap-3 mb-8">
+      {/* STAT CARDS - Now utilizing the updated StatCard component */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <StatCard value={active.length}       label="Active Courses" />
         <StatCard value={completed.length}    label="Completed" />
         <StatCard value={certificates.length} label="Certificates" />
       </div>
 
-      <section className="mb-8">
-        <h2 className="font-semibold text-navy mb-3">Continue Learning</h2>
+      {/* ACTIVE COURSES */}
+      <section className="mb-10">
+        <h2 className="text-lg font-bold text-navy mb-4">Continue Learning</h2>
         {enrollments.length === 0 ? (
-          <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center text-sm text-gray-500">
-            You have not enrolled in any courses yet.
-            <div className="mt-3">
-              <Link to="/courses" className="text-navy font-semibold underline">Explore Courses</Link>
-            </div>
+          <div className="border border-dashed border-gray-300 rounded-xl p-8 text-center text-sm text-gray-500 bg-white">
+            <p className="mb-3">You have not enrolled in any courses yet.</p>
+            <Link to="/courses" className="inline-block bg-[#A88044] text-white px-6 py-2 rounded-lg font-semibold hover:bg-opacity-90 transition-all">
+              Explore Courses
+            </Link>
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="space-y-6">
             {active.map((enr) => (
-              <div key={enr.id} className="border border-gray-100 rounded-lg overflow-hidden shadow-card bg-white">
-                <div className="h-20 bg-navy flex items-center justify-center px-3">
-                  <p className="text-white text-xs font-medium text-center">
+              <div key={enr.id} className="rounded-xl overflow-hidden shadow-sm border border-gray-200 bg-white">
+
+                {/* Dark Navy Header inside the card */}
+                <div className="bg-navy px-6 py-4 border-b border-navy">
+                  <h3 className="text-white font-semibold text-sm">
                     {enr.course_title || (enr.course && typeof enr.course === 'object' ? enr.course.title : 'Course')}
-                  </p>
+                  </h3>
                 </div>
-                <div className="p-3">
-                  <ProgressBar percent={enr.progress_percentage || 0} />
-                  <p className="text-xs text-gray-400 mt-1 mb-2">{enr.progress_percentage || 0}% complete</p>
+
+                {/* Horizontal Flex Body */}
+                <div className="px-6 py-5 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="flex-1 w-full">
+                    {/* Utilizing the newly updated ProgressBar component */}
+                    <ProgressBar
+                      percent={enr.progress_percentage || 0}
+                      showLabel={true}
+                    />
+                  </div>
+
                   <Link
                     to={`/learn/${courseId(enr)}`}
-                    className="inline-block bg-navy text-white text-xs font-semibold px-4 py-2 rounded-md"
+                    className="bg-navy text-white px-8 py-2.5 rounded-lg text-sm font-semibold hover:bg-opacity-90 transition-all text-center whitespace-nowrap shadow-sm"
                   >
                     Continue
                   </Link>
                 </div>
+
               </div>
             ))}
           </div>
         )}
       </section>
 
+      {/* COMPLETED COURSES */}
       {completed.length > 0 && (
-        <section className="mb-8">
-          <h2 className="font-semibold text-navy mb-3">Completed Courses</h2>
-          <div className="space-y-2">
+        <section className="mb-10">
+          <h2 className="text-lg font-bold text-navy mb-4">Completed Courses</h2>
+          <div className="space-y-3">
             {completed.map((enr) => (
-              <div key={enr.id} className="flex items-center gap-3 bg-white border border-gray-100 rounded-lg px-4 py-3">
-                <span className="text-green-600 text-lg">✓</span>
-                <div>
-                  <p className="text-sm font-medium text-navy">
+              <div key={enr.id} className="flex items-center gap-4 bg-white border border-[#D19A30]/40 shadow-sm rounded-xl px-6 py-4">
+                <div className="w-8 h-8 rounded-full bg-[#D19A30]/15 flex items-center justify-center flex-shrink-0">
+                  <span className="text-[#D19A30] font-bold">✓</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-navy">
                     {enr.course_title || (enr.course && typeof enr.course === 'object' ? enr.course.title : 'Course')}
                   </p>
-                  <Link to="/certificates" className="text-xs text-navy underline">View Certificate</Link>
                 </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {certificates.length > 0 && (
-        <section>
-          <h2 className="font-semibold text-navy mb-3">My Certificates</h2>
-          <div className="space-y-2">
-            {certificates.map((cert) => (
-              <div key={cert.id} className="flex items-center justify-between bg-white border border-gray-100 rounded-lg px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium text-navy">
-                    {cert.course?.title || 'Certificate'}
-                  </p>
-                  <p className="text-xs text-gray-400">{cert.verification_code}</p>
-                </div>
-                <Link to="/certificates" className="text-xs text-navy underline">View</Link>
+                <Link to="/certificates" className="text-sm font-semibold text-[#A88044] hover:underline">
+                  View Certificate
+                </Link>
               </div>
             ))}
           </div>

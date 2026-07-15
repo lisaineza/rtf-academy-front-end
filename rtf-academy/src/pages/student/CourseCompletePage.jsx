@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../../services/api.js'
@@ -55,7 +56,8 @@ export default function CourseCompletePage() {
 
   return (
     <div className="max-w-md mx-auto px-4 py-10 text-center">
-      <div className="bg-green-100 text-green-700 rounded-md py-3 mb-6 font-medium">
+      {/* CHANGED: Swapped bright green bg/text for a clean solid navy block */}
+      <div className="bg-navy text-white rounded-md py-3 mb-6 font-medium shadow-sm">
            Course Completed Successfully!
       </div>
 
@@ -75,14 +77,20 @@ export default function CourseCompletePage() {
         )}
       </div>
 
-      <div className="space-y-3">
-        <Link to="/certificates"><Button className="w-full">View All Certificates</Button></Link>
-        <button onClick={handleShare} className="w-full border border-navy text-navy text-sm font-semibold py-2 rounded-md">
-          {copyMsg || 'Share Certificate Link'}
-        </button>
-        <Link to="/dashboard"><Button variant="outline" className="w-full">Back to Dashboard</Button></Link>
+      {/* CHANGED: Replaced stacked buttons with a cleaner grid layout */}
+      <div className="flex flex-col gap-3">
+        <Link to="/certificates" className="w-full">
+          <Button className="w-full">View All Certificates</Button>
+        </Link>
+        <div className="flex gap-3">
+          <button onClick={handleShare} className="flex-1 border border-navy text-navy text-sm font-semibold py-2 rounded-md hover:bg-gray-50 transition-colors">
+            {copyMsg || 'Share Certificate Link'}
+          </button>
+          <Link to="/dashboard" className="flex-1">
+            <Button variant="outline" className="w-full">Back to Dashboard</Button>
+          </Link>
+        </div>
       </div>
     </div>
   )
 }
-

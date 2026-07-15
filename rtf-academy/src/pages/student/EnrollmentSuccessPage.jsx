@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../services/api.js'
@@ -52,8 +53,9 @@ export default function EnrollmentSuccessPage() {
     <div className="max-w-md mx-auto px-6 py-16 flex flex-col items-center bg-white min-h-screen">
 
       {/* Checkmark Icon */}
-      <div className="w-28 h-28 bg-green-200 rounded-full flex items-center justify-center mb-6">
-        <svg className="w-14 h-14 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+      {/* Updated to Dark Gold with 20% opacity background */}
+      <div className="w-28 h-28 bg-[#A88044]/20 rounded-full flex items-center justify-center mb-6">
+        <svg className="w-14 h-14 text-[#A88044]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
       </div>
@@ -93,7 +95,8 @@ export default function EnrollmentSuccessPage() {
 
           <div className="flex justify-between items-center text-sm">
             <span className="text-gray-500 font-medium">Certification</span>
-            <span className="font-semibold text-green-500">Included On Completion</span>
+            {/* Updated text to Dark Gold */}
+            <span className="font-semibold text-[#A88044]">Included On Completion</span>
           </div>
         </div>
       </div>

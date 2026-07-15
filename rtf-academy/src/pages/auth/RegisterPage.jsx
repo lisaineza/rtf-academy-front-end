@@ -42,76 +42,92 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="max-w-sm mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold text-navy mb-6">Create Account</h1>
+    <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center bg-gray-50 px-4 py-10">
 
-      {error && <p className="text-sm text-red-600 mb-4 bg-red-50 rounded-md px-3 py-2">{error}</p>}
+      {/* CHANGED: Card border is now gold */}
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-[#D19A30]/40 p-8 sm:p-10">
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="text-sm font-medium text-navy">Full Name</label>
-          <input
-            type="text"
-            placeholder="Enter full name"
-            className="w-full mt-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
-            value={form.full_name}
-            onChange={(e) => update('full_name', e.target.value)}
-          />
+        {/* CHANGED: Title text is now gold */}
+        <h1 className="text-2xl font-bold text-[#D19A30] text-center mb-8">Create Account</h1>
+
+        {error && <p className="text-sm text-red-600 mb-4 bg-red-50 rounded-md px-3 py-2 text-center">{error}</p>}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="text-sm font-medium text-navy block mb-1">Full Name</label>
+            <input
+              type="text"
+              placeholder="Enter full name"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20 focus:border-navy transition-colors text-navy"
+              value={form.full_name}
+              onChange={(e) => update('full_name', e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-navy block mb-1">Email</label>
+            <input
+              type="email"
+              placeholder="Enter email address"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20 focus:border-navy transition-colors text-navy"
+              value={form.email}
+              onChange={(e) => update('email', e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-navy block mb-1">Password</label>
+            <input
+              type="password"
+              placeholder="Enter password"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20 focus:border-navy transition-colors text-navy"
+              value={form.password}
+              onChange={(e) => update('password', e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-navy block mb-1">Confirm Password</label>
+            <input
+              type="password"
+              placeholder="Confirm password"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20 focus:border-navy transition-colors text-navy"
+              value={form.confirm}
+              onChange={(e) => update('confirm', e.target.value)}
+            />
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-gray-600 mt-2">
+            <input
+              type="checkbox"
+              checked={form.agree}
+              onChange={(e) => update('agree', e.target.checked)}
+              className="rounded border-gray-300 text-navy focus:ring-navy accent-navy"
+            />
+            I agree to the Terms of Service
+          </label>
+
+          <Button type="submit" className="w-full py-2.5 text-base">Sign Up</Button>
+        </form>
+
+        <div className="flex items-center gap-3 my-6">
+          <div className="h-px bg-gray-200 flex-1" />
+          <span className="text-xs text-gray-400 uppercase tracking-wider font-medium">or continue with</span>
+          <div className="h-px bg-gray-200 flex-1" />
         </div>
-        <div>
-          <label className="text-sm font-medium text-navy">Email</label>
-          <input
-            type="email"
-            placeholder="Enter email address"
-            className="w-full mt-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
-            value={form.email}
-            onChange={(e) => update('email', e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium text-navy">Password</label>
-          <input
-            type="password"
-            placeholder="Enter password"
-            className="w-full mt-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
-            value={form.password}
-            onChange={(e) => update('password', e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium text-navy">Confirm Password</label>
-          <input
-            type="password"
-            placeholder="Confirm password"
-            className="w-full mt-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
-            value={form.confirm}
-            onChange={(e) => update('confirm', e.target.value)}
-          />
-        </div>
-        <label className="flex items-center gap-2 text-sm text-gray-600">
-          <input type="checkbox" checked={form.agree} onChange={(e) => update('agree', e.target.checked)} />
-          I agree to the Terms of Service
-        </label>
 
-        <Button type="submit" className="w-full">Sign Up</Button>
-      </form>
+        <GoogleButton onClick={handleGoogle} disabled={googleLoading} />
 
-      <div className="flex items-center gap-3 my-5">
-        <div className="h-px bg-gray-200 flex-1" />
-        <span className="text-xs text-gray-400">or continue with</span>
-        <div className="h-px bg-gray-200 flex-1" />
-      </div>
+        {!firebaseEnabled && (
+          <p className="text-xs text-gray-400 mt-4 text-center leading-relaxed">
+            Google sign-in needs Firebase config — see .env.example.
+          </p>
+        )}
 
-      <GoogleButton onClick={handleGoogle} disabled={googleLoading} />
-      {!firebaseEnabled && (
-        <p className="text-xs text-gray-400 mt-2 text-center">
-          Google sign-in needs Firebase config — see .env.example.
+        <p className="text-center text-sm text-gray-600 mt-8">
+          Already have an account? <Link to="/login" className="text-[#A88044] font-semibold hover:underline">Log in</Link>
         </p>
-      )}
-
-      <p className="text-center text-sm text-gray-500 mt-6">
-        Already have an account? <Link to="/login" className="text-green-700 font-medium">Log in</Link>
-      </p>
+      </div>
     </div>
   )
 }

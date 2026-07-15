@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../services/api.js'
@@ -56,7 +57,7 @@ function VideoPlayer({ url, videoRef }) {
 // ── sidebar icon components ───────────────────────────────────────────────────
 function IconCheck() {
   return (
-    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center text-white text-xs font-bold">✓</span>
+    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#D19A30] flex items-center justify-center text-white text-xs font-bold">✓</span>
   )
 }
 function IconCurrent() {
@@ -69,7 +70,7 @@ function IconLock() {
   return <span className="flex-shrink-0 w-5 h-5 text-gray-400 flex items-center justify-center text-sm">🔒</span>
 }
 function IconQuiz() {
-  return <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gold flex items-center justify-center text-navy text-xs font-bold">Q</span>
+  return <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#D19A30] flex items-center justify-center text-navy text-xs font-bold">Q</span>
 }
 
 // ── main component ────────────────────────────────────────────────────────────
@@ -211,11 +212,12 @@ export default function CoursePage() {
 
   // ── render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full min-h-screen bg-gray-50">
+    // CHANGED: Fixed height wrapper forcing internal overflow rather than whole-page scrolling
+    <div className="flex flex-col h-[calc(100vh-180px)] md:h-[calc(100vh-144px)] min-h-[500px] bg-gray-50 rounded-xl overflow-hidden border border-gray-200 shadow-sm w-full">
 
       {/* ── Top bar ──────────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-3 sticky top-0 z-20">
-        {/* Sidebar toggle (hamburger) */}
+      {/* CHANGED: Removed sticky top-0, added shrink-0 so it pins flawlessly */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 shrink-0 z-20">
         <button
           onClick={() => setSidebar((o) => !o)}
           className="p-1.5 rounded hover:bg-gray-100 text-gray-500 shrink-0"
@@ -233,7 +235,7 @@ export default function CoursePage() {
         </div>
 
         <div className="hidden sm:flex items-center gap-2 shrink-0 w-40">
-          <ProgressBar percent={progressPct} color="bg-green-500" height="h-1.5" />
+          <ProgressBar percent={progressPct} color="bg-[#D19A30]" height="h-1.5" />
           <span className="text-xs text-gray-500 whitespace-nowrap">{progressPct}%</span>
         </div>
       </div>
@@ -241,11 +243,12 @@ export default function CoursePage() {
       {/* ── Body: sidebar + content ───────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* ── LEFT SIDEBAR (Coursera-style) ─────────────────────────── */}
+        {/* ── LEFT SIDEBAR ─────────────────────────── */}
         <aside
           className={`
-            bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 transition-all duration-200
+            bg-white border-r border-[#D19A30]/40 overflow-y-auto flex-shrink-0 transition-all duration-200
             ${sidebarOpen ? 'w-72' : 'w-0 overflow-hidden'}
+            [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden
           `}
         >
           <div className="px-4 py-3 border-b border-gray-100">
@@ -263,16 +266,12 @@ export default function CoursePage() {
 
             return (
               <div key={mod.id} className="border-b border-gray-100">
-
-                {/* Module header */}
                 <button
                   onClick={() => !isLocked && toggleModule(mod.id)}
                   disabled={isLocked}
                   className={`w-full text-left px-4 py-3 flex items-start gap-2 hover:bg-gray-50 transition-colors ${isLocked ? 'cursor-not-allowed opacity-60' : ''}`}
                 >
-                  {/* Expand arrow */}
                   <span className={`text-gray-400 mt-0.5 text-xs transition-transform duration-150 ${isOpen ? 'rotate-90' : ''}`}>▶</span>
-
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-800 leading-tight">
                       {isLocked && '🔒 '}{mod.title}
@@ -284,7 +283,6 @@ export default function CoursePage() {
                   </div>
                 </button>
 
-                {/* Lessons list (accordion) */}
                 {isOpen && !isLocked && (
                   <div className="pb-1">
                     {(mod.lessons || []).map((lesson) => {
@@ -316,18 +314,17 @@ export default function CoursePage() {
                       )
                     })}
 
-                    {/* Take Quiz row — appears when all lessons in module are done */}
                     {hasQuiz && (
                       <Link
                         to={`/learn/${courseId}/assessment/${mod.id}`}
-                        className="w-full text-left px-4 py-2.5 flex items-center gap-3 hover:bg-yellow-50 border-l-4 border-transparent hover:border-gold transition-colors"
+                        className="w-full text-left px-4 py-2.5 flex items-center gap-3 hover:bg-yellow-50 border-l-4 border-transparent hover:border-[#D19A30] transition-colors"
                       >
                         <IconQuiz />
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-semibold text-navy">Module Quiz</p>
                           <p className="text-xs text-gray-400">Test your knowledge</p>
                         </div>
-                        <span className="text-xs text-gold font-semibold">→</span>
+                        <span className="text-xs text-[#D19A30] font-semibold">→</span>
                       </Link>
                     )}
                   </div>
@@ -338,15 +335,13 @@ export default function CoursePage() {
         </aside>
 
         {/* ── MAIN CONTENT AREA ────────────────────────────────────── */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
 
-            {/* Video */}
             <div className="mb-5 rounded-xl overflow-hidden shadow-sm">
               <VideoPlayer url={currentLesson?.video_s3_url} videoRef={videoRef} />
             </div>
 
-            {/* Lesson header */}
             <div className="mb-4">
               <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">
                 {(course.modules || []).find((m) => m.id === currentLesson?.moduleId)?.title || ''}
@@ -354,23 +349,20 @@ export default function CoursePage() {
               <h1 className="text-xl font-bold text-navy leading-tight">{currentLesson?.title}</h1>
             </div>
 
-            {/* Locked banner */}
             {currentLesson?.moduleLocked && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-5 text-sm text-amber-800">
                 🔒 This module is locked. Complete all lessons and the quiz in the previous module first.
               </div>
             )}
 
-            {/* Lesson body text */}
             {currentLesson?.text_content && (
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-5 py-5 mb-5">
+              <div className="bg-white rounded-xl border border-[#D19A30]/40 shadow-sm px-5 py-5 mb-5">
                 <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
                   {currentLesson.text_content}
                 </p>
               </div>
             )}
 
-            {/* Previous / Next navigation */}
             <div className="flex items-center justify-between mb-6">
               <button
                 onClick={() => prevLesson && setLesson(prevLesson.id)}
@@ -388,14 +380,14 @@ export default function CoursePage() {
               </button>
             </div>
 
-            {/* ── MARK AS COMPLETE — bottom of lesson ──────────────── */}
+            {/* ── MARK AS COMPLETE ──────────────── */}
             {!currentLesson?.moduleLocked && (
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-5 py-5">
+              <div className="bg-white rounded-xl border border-[#D19A30]/40 shadow-sm px-5 py-5">
                 {completedIds.has(currentLesson?.id) ? (
                   <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-sm font-bold flex-shrink-0">✓</span>
+                    <span className="w-8 h-8 rounded-full bg-[#D19A30]/10 text-[#D19A30] flex items-center justify-center text-sm font-bold flex-shrink-0">✓</span>
                     <div>
-                      <p className="text-sm font-semibold text-green-700">Lesson completed</p>
+                      <p className="text-sm font-semibold text-[#D19A30]">Lesson completed</p>
                       <p className="text-xs text-gray-400">Great job! Move to the next lesson or take the module quiz.</p>
                     </div>
                   </div>
@@ -414,7 +406,6 @@ export default function CoursePage() {
                   </div>
                 )}
 
-                {/* Show quiz CTA after all module lessons done */}
                 {!completedIds.has(currentLesson?.id) ? null : (() => {
                   const mod = (course.modules || []).find((m) => m.id === currentLesson?.moduleId)
                   if (mod && allLessonsDone(mod)) {
@@ -422,7 +413,7 @@ export default function CoursePage() {
                       <div className="mt-4 pt-4 border-t border-gray-100">
                         <Link
                           to={`/learn/${courseId}/assessment/${mod.id}`}
-                          className="inline-flex items-center gap-2 bg-gold text-navy-dark font-semibold text-sm px-5 py-2.5 rounded-md hover:bg-gold-dark transition-colors"
+                          className="inline-flex items-center gap-2 bg-[#D19A30] text-navy-dark font-semibold text-sm px-5 py-2.5 rounded-md hover:opacity-90 transition-opacity"
                         >
                           Take Module Quiz →
                         </Link>
@@ -435,11 +426,10 @@ export default function CoursePage() {
               </div>
             )}
 
-            {/* Course complete CTA */}
             {progress?.is_completed && (
               <div className="mt-4">
                 <Link to={`/course-complete/${courseId}`}>
-                  <Button variant="gold" className="w-full">View My Certificate 🎓</Button>
+                  <Button className="w-full bg-[#D19A30] hover:bg-opacity-90 text-white border-none">View My Certificate 🎓</Button>
                 </Link>
               </div>
             )}

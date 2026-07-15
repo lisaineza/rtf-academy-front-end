@@ -1,8 +1,10 @@
+
+
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 
-// Layouts
-import Header from '../components/layout/Header.jsx'
+// NEW Master Layout
+import Layout from '../components/layout/Layout.jsx'
 import Footer from '../components/layout/Footer.jsx'
 import ProtectedRoute from '../components/layout/ProtectedRoute.jsx'
 
@@ -27,18 +29,9 @@ import EnrollmentSuccessPage from '../pages/student/EnrollmentSuccessPage.jsx'
 import AdminDashboard        from '../pages/admin/AdminDashboard.jsx'
 import AdminCourseBuilder    from '../pages/admin/AdminCourseBuilder.jsx'
 
-function WithLayout({ children }) {
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1">{children}</main>
-      <Footer />
-    </div>
-  )
-}
-
 export default function AppRoutes() {
   const { loading } = useAuth()
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -47,49 +40,54 @@ export default function AppRoutes() {
     )
   }
 
+  // We wrap everything in our new master Layout once!
   return (
-    <Routes>
-      {/* ── Public ─────────────────────────────────────────────────── */}
-      <Route path="/" element={<WithLayout><HomePage /></WithLayout>} />
-      <Route path="/login" element={<WithLayout><LoginPage /></WithLayout>} />
-      <Route path="/register" element={<WithLayout><RegisterPage /></WithLayout>} />
-      <Route path="/forgot-password" element={<WithLayout><ForgotPasswordPage /></WithLayout>} />
-      <Route path="/courses" element={<WithLayout><CourseCatalogPage /></WithLayout>} />
-      <Route path="/courses/:id" element={<WithLayout><CourseDetailPage /></WithLayout>} />
+    <Layout>
+      <Routes>
+        {/* ── Public ─────────────────────────────────────────────────── */}
+        {/* We keep the Footer ONLY on the home page so it doesn't clash with the app views */}
+        <Route path="/" element={<><HomePage /><Footer /></>} />
 
-      {/* ── Public certificate verification (no login required) ─────── */}
-      <Route path="/verify/:code" element={<CertificateVerifyPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/courses" element={<CourseCatalogPage />} />
+        <Route path="/courses/:id" element={<CourseDetailPage />} />
 
-      {/* ── Student (login required) ────────────────────────────────── */}
-      <Route path="/dashboard" element={
-        <ProtectedRoute><WithLayout><StudentDashboard /></WithLayout></ProtectedRoute>
-      } />
-      <Route path="/learn/:id" element={
-        <ProtectedRoute><WithLayout><CoursePage /></WithLayout></ProtectedRoute>
-      } />
-      <Route path="/learn/:id/assessment/:moduleId" element={
-        <ProtectedRoute><WithLayout><AssessmentPage /></WithLayout></ProtectedRoute>
-      } />
-      <Route path="/certificates" element={
-        <ProtectedRoute><WithLayout><CertificatesPage /></WithLayout></ProtectedRoute>
-      } />
-      <Route path="/course-complete/:id" element={
-        <ProtectedRoute><WithLayout><CourseCompletePage /></WithLayout></ProtectedRoute>
-      } />
-      <Route path="/enrollment-success/:id" element={
-        <ProtectedRoute><WithLayout><EnrollmentSuccessPage /></WithLayout></ProtectedRoute>
-      } />
+        {/* ── Public certificate verification (no login required) ─────── */}
+        <Route path="/verify/:code" element={<CertificateVerifyPage />} />
 
-      {/* ── Admin (login + admin role required) ─────────────────────── */}
-      <Route path="/admin" element={
-        <ProtectedRoute adminOnly><WithLayout><AdminDashboard /></WithLayout></ProtectedRoute>
-      } />
-      <Route path="/admin/courses" element={
-        <ProtectedRoute adminOnly><WithLayout><AdminCourseBuilder /></WithLayout></ProtectedRoute>
-      } />
+        {/* ── Student (login required) ────────────────────────────────── */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute><StudentDashboard /></ProtectedRoute>
+        } />
+        <Route path="/learn/:id" element={
+          <ProtectedRoute><CoursePage /></ProtectedRoute>
+        } />
+        <Route path="/learn/:id/assessment/:moduleId" element={
+          <ProtectedRoute><AssessmentPage /></ProtectedRoute>
+        } />
+        <Route path="/certificates" element={
+          <ProtectedRoute><CertificatesPage /></ProtectedRoute>
+        } />
+        <Route path="/course-complete/:id" element={
+          <ProtectedRoute><CourseCompletePage /></ProtectedRoute>
+        } />
+        <Route path="/enrollment-success/:id" element={
+          <ProtectedRoute><EnrollmentSuccessPage /></ProtectedRoute>
+        } />
 
-      {/* ── Fallback ────────────────────────────────────────────────── */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* ── Admin (login + admin role required) ─────────────────────── */}
+        <Route path="/admin" element={
+          <ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>
+        } />
+        <Route path="/admin/courses" element={
+          <ProtectedRoute adminOnly><AdminCourseBuilder /></ProtectedRoute>
+        } />
+
+        {/* ── Fallback ────────────────────────────────────────────────── */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Layout>
   )
 }

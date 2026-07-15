@@ -80,106 +80,130 @@ export default function AssessmentPage() {
 
   if (submitted && result) {
     return (
-      <div className="max-w-sm mx-auto px-4 py-12 text-center">
-        <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl ${result.passed ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-          {result.passed ? '✓' : '✕'}
-        </div>
-        <h1 className="text-xl font-bold text-navy mb-1">
-          {result.passed ? 'Quiz Passed!' : 'Not quite — try again'}
-        </h1>
-        <p className="text-sm text-gray-500 mb-1">
-          Score: {result.score}% &nbsp;·&nbsp; {result.correct_answers}/{result.total_questions} correct
-        </p>
-        <p className="text-xs text-gray-400 mb-4">Passing threshold: {result.passing_threshold}%</p>
+      <div className="max-w-md mx-auto px-4 py-12">
+        <div className="bg-white rounded-2xl shadow-sm border border-[#D19A30]/40 p-8 md:p-10 text-center">
 
-        {result.flagged && (
-          <p className="text-xs text-amber-600 bg-amber-50 rounded-md px-3 py-2 mb-4">
-            ⚠ This attempt was flagged for facilitator review.
-          </p>
-        )}
-
-        {result.certificate_earned && (
-          <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 mb-4 text-left">
-            <p className="text-sm font-semibold text-green-800 mb-1">🎓 Course Complete — Certificate Earned!</p>
-            <p className="text-xs text-green-700">Code: {result.certificate_earned.verification_code}</p>
+          <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 ${result.passed ? 'bg-[#D19A30]/20 text-[#D19A30]' : 'bg-red-100 text-red-600'}`}>
+            {result.passed ? (
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            ) : (
+              <span className="text-4xl font-bold">✕</span>
+            )}
           </div>
-        )}
 
-        <div className="space-y-3 mt-4">
-          {result.passed ? (
-            <>
-              {result.certificate_earned && (
-                <Button className="w-full" onClick={() => navigate(`/course-complete/${courseId}`)}>
-                  View My Certificate
-                </Button>
-              )}
-              <Button variant="outline" className="w-full" onClick={() => navigate(`/learn/${courseId}`)}>
-                Back to Course
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button className="w-full" onClick={() => { setSubmitted(false); setResult(null); setAnswers({}) }}>
-                Try Again
-              </Button>
-              <Button variant="outline" className="w-full" onClick={() => navigate(`/learn/${courseId}`)}>
-                Review Lessons
-              </Button>
-            </>
+          <h1 className="text-2xl font-bold text-navy mb-3">
+            {result.passed ? 'Quiz Passed!' : 'Not quite — try again'}
+          </h1>
+          <p className="text-base text-gray-500 mb-2">
+            Score: {result.score}% &nbsp;·&nbsp; {result.correct_answers}/{result.total_questions} correct
+          </p>
+          <p className="text-sm text-gray-400 mb-8">Passing threshold: {result.passing_threshold}%</p>
+
+          {result.flagged && (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-6">
+              ⚠ This attempt was flagged for facilitator review.
+            </p>
           )}
+
+          {result.certificate_earned && (
+            <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 mb-6 text-left">
+              <p className="text-sm font-semibold text-green-800 mb-1">🎓 Course Complete — Certificate Earned!</p>
+              <p className="text-xs text-green-700">Code: {result.certificate_earned.verification_code}</p>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {result.passed ? (
+              <>
+                {result.certificate_earned && (
+                  <Button className="w-full py-3" onClick={() => navigate(`/course-complete/${courseId}`)}>
+                    View My Certificate
+                  </Button>
+                )}
+                {/* CHANGED: Forced hover and active text colors to stay navy */}
+                <Button variant="outline" className="w-full py-3.5 font-semibold border-navy text-navy hover:text-navy hover:bg-navy/5 active:text-navy active:bg-navy/10" onClick={() => navigate(`/learn/${courseId}`)}>
+                  Back to Course
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button className="w-full py-3" onClick={() => { setSubmitted(false); setResult(null); setAnswers({}) }}>
+                  Try Again
+                </Button>
+                {/* CHANGED: Forced hover and active text colors to stay navy */}
+                <Button variant="outline" className="w-full py-3.5 font-semibold border-navy text-navy hover:text-navy hover:bg-navy/5 active:text-navy active:bg-navy/10" onClick={() => navigate(`/learn/${courseId}`)}>
+                  Review Lessons
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-bold text-navy">{quiz.title}</h1>
-        <QuizTimer minutes={quiz.time_limit_minutes || 10} onExpire={() => handleSubmit(false)} />
-      </div>
-      <p className="text-xs text-gray-400 mb-4">Passing threshold: {quiz.passing_threshold}%</p>
+    <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="bg-white rounded-2xl shadow-sm border border-[#D19A30]/40 p-6 md:p-8">
 
-      <QuizIntegrityWrapper
-        onViolation={(type) => logIntegrityEvent(courseId, { type, quiz_id: quiz.id })}
-      >
-        {({ flagged }) => (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-gray-100">
           <div>
-            <div className="space-y-5 mb-6">
-              {quiz.questions.map((q, idx) => (
-                <div key={q.id} className="bg-white border border-gray-100 rounded-lg p-4 shadow-card" onCopy={handleCopy}>
-                  <p className="font-medium text-navy text-sm mb-3">{idx + 1}. {q.question_text}</p>
-                  <div className="space-y-2">
-                    {(q.choices || []).map((c) => (
-                      <label key={c.id} className={`flex items-center gap-2 text-sm p-2 rounded cursor-pointer transition-colors ${answers[q.id] === c.id ? 'bg-navy text-white' : 'text-gray-700 hover:bg-gray-50'}`}>
-                        <input
-                          type="radio"
-                          name={q.id}
-                          value={c.id}
-                          checked={answers[q.id] === c.id}
-                          onChange={() => handleAnswer(q.id, c.id)}
-                          className="accent-gold"
-                        />
-                        {c.choice_text}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
-
-            <Button
-              onClick={() => handleSubmit(flagged)}
-              disabled={!answeredAll || submitting}
-              className="w-full"
-            >
-              {submitting ? 'Submitting…' : answeredAll ? 'Submit Quiz' : `Answer all ${quiz.questions.length} questions to submit`}
-            </Button>
+            <h1 className="text-xl font-bold text-navy mb-1">{quiz.title}</h1>
+            <p className="text-sm font-semibold text-[#D19A30]">Passing threshold: {quiz.passing_threshold}%</p>
           </div>
-        )}
-      </QuizIntegrityWrapper>
+          <QuizTimer minutes={quiz.time_limit_minutes || 10} onExpire={() => handleSubmit(false)} />
+        </div>
+
+        <QuizIntegrityWrapper
+          onViolation={(type) => logIntegrityEvent(courseId, { type, quiz_id: quiz.id })}
+        >
+          {({ flagged }) => (
+            <div>
+              <div className="space-y-6 mb-8">
+                {quiz.questions.map((q, idx) => (
+                  <div key={q.id} className="bg-gray-50 border border-gray-200 rounded-xl p-5" onCopy={handleCopy}>
+                    <p className="font-bold text-navy text-base mb-4">{idx + 1}. {q.question_text}</p>
+                    <div className="space-y-2.5">
+                      {(q.choices || []).map((c) => (
+                        <label
+                          key={c.id}
+                          className={`flex items-center gap-3 text-sm p-3 rounded-lg cursor-pointer transition-all border ${
+                            answers[q.id] === c.id 
+                              ? 'bg-navy text-white border-navy shadow-sm' 
+                              : 'bg-white text-navy border-gray-200 hover:border-[#D19A30]/50'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name={q.id}
+                            value={c.id}
+                            checked={answers[q.id] === c.id}
+                            onChange={() => handleAnswer(q.id, c.id)}
+                            className="w-4 h-4 accent-[#D19A30]"
+                          />
+                          <span className="font-medium">{c.choice_text}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {error && <p className="text-red-600 bg-red-50 border border-red-100 p-3 rounded-lg text-sm mb-4 font-medium">{error}</p>}
+
+              <Button
+                onClick={() => handleSubmit(flagged)}
+                disabled={!answeredAll || submitting}
+                className="w-full py-3.5 text-base"
+              >
+                {submitting ? 'Submitting Assessment…' : answeredAll ? 'Submit Assessment' : `Answer all ${quiz.questions.length} questions to submit`}
+              </Button>
+            </div>
+          )}
+        </QuizIntegrityWrapper>
+      </div>
     </div>
   )
 }

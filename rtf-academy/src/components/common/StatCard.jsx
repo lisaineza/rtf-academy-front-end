@@ -1,8 +1,11 @@
-export default function StatCard({ value, label, dark = true }) {
+
+export default function StatCard({ value, label }) {
   return (
-    <div className={`rounded-lg px-5 py-4 flex-1 min-w-[100px] text-center ${dark ? 'bg-navy text-white' : 'bg-white border border-gray-200'}`}>
-      <p className="text-2xl font-bold">{value}</p>
-      <p className={`text-xs mt-1 ${dark ? 'text-gray-300' : 'text-gray-500'}`}>{label}</p>
+    <div className="bg-white border border-[#D19A30] rounded-xl py-6 flex flex-col items-center justify-center shadow-sm">
+      <span className="text-4xl font-bold text-navy mb-1">{value}</span>
+      <span className="text-xs text-gray-500 font-medium uppercase tracking-wider text-center px-2">
+        {label}
+      </span>
     </div>
   )
 }

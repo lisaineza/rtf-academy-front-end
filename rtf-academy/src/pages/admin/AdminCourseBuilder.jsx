@@ -4,15 +4,16 @@ import { api } from '../../services/api.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import Button from '../../components/common/Button.jsx'
 
+// Updated Field component for cleaner focus states
 function Field({ label, value, onChange, type = 'text', placeholder = '' }) {
   return (
-    <div className="mb-3">
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+    <div className="mb-4">
+      <label className="block text-xs font-bold text-navy mb-1.5">{label}</label>
       {type === 'textarea'
         ? <textarea value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-            rows={3} className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy" />
+            rows={4} className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm text-navy focus:outline-none focus:border-[#D19A30] focus:ring-1 focus:ring-[#D19A30] transition-colors" />
         : <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-            className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy" />
+            className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm text-navy focus:outline-none focus:border-[#D19A30] focus:ring-1 focus:ring-[#D19A30] transition-colors" />
       }
     </div>
   )
@@ -20,23 +21,21 @@ function Field({ label, value, onChange, type = 'text', placeholder = '' }) {
 
 export default function AdminCourseBuilder() {
   const { getToken } = useAuth()
-  const [courses, setCourses]         = useState([])
-  const [loading, setLoading]         = useState(true)
-  const [expandedCourse, setExpanded] = useState(null)
-  const [error, setError]             = useState('')
-  const [saving, setSaving]           = useState(false)
+  const [courses, setCourses] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  // Course form
-  const [newCourse, setNewCourse] = useState({ title: '', description: '', is_published: true })
-  // Module form per course
+  // NEW: activeTab replaces expandedCourse. 'new' shows the create form, an ID shows the course editor.
+  const [activeTab, setActiveTab] = useState('new')
+
+  const [newCourse, setNewCourse] = useState({ title: '', description: '', is_published: true, outcomes: '' })
   const [newModule, setNewModule] = useState({})
-  // Lesson form per module
   const [newLesson, setNewLesson] = useState({})
 
   async function refresh() {
     const token = await getToken()
     const data = await api.listCourses(token)
-    // Fetch full detail for each course to get modules
     const full = await Promise.all(
       (Array.isArray(data) ? data : []).map((c) => api.getCourse(c.id, token))
     )
@@ -52,17 +51,29 @@ export default function AdminCourseBuilder() {
     setSaving(true)
     try {
       const token = await getToken()
-      await api.createCourse(newCourse, token)
-      setNewCourse({ title: '', description: '', is_published: true })
+      const outcomesArray = newCourse.outcomes
+        ? newCourse.outcomes.split('\n').map(line => line.trim()).filter(Boolean)
+        : []
+
+      const payload = {
+        title: newCourse.title,
+        description: newCourse.description,
+        is_published: newCourse.is_published,
+        outcomes: outcomesArray
+      }
+
+      await api.createCourse(payload, token)
+      setNewCourse({ title: '', description: '', is_published: true, outcomes: '' })
       await refresh()
     } catch (e) { setError(e.message) }
     setSaving(false)
   }
 
   async function handleDeleteCourse(id) {
-    if (!window.confirm('Delete this course and all its content?')) return
+    if (!window.confirm('Delete this course and all its content? This cannot be undone.')) return
     const token = await getToken()
     await api.deleteCourse(id, token).catch((e) => setError(e.message))
+    setActiveTab('new') // Reset view to creation form after deleting
     await refresh()
   }
 
@@ -104,105 +115,188 @@ export default function AdminCourseBuilder() {
     setSaving(false)
   }
 
-  if (loading) return <p className="text-center py-16 text-gray-400">Loading…</p>
+  if (loading) return <p className="text-center py-16 text-gray-400">Loading workspace…</p>
+
+  const activeCourse = courses.find(c => c.id === activeTab)
+  // Fallback to 'new' if the activeTab ID somehow doesn't exist anymore
+  if (!activeCourse && activeTab !== 'new') setActiveTab('new')
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-navy">Course Builder</h1>
-        <Link to="/admin" className="text-sm text-navy underline">← Dashboard</Link>
+    <div className="flex flex-col h-[calc(100vh-80px)] max-w-6xl mx-auto px-4 py-6">
+
+      {/* Header Area */}
+      <div className="flex items-center justify-between mb-6 flex-shrink-0">
+        <h1 className="text-2xl font-bold text-navy">Course Builder</h1>
+        <Link to="/admin" className="text-sm font-semibold text-[#D19A30] hover:underline">
+          ← Back to Dashboard
+        </Link>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4">
-          {error} <button onClick={() => setError('')} className="ml-2 underline">Dismiss</button>
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4 flex-shrink-0 flex justify-between items-center">
+          <span>{error}</span>
+          <button onClick={() => setError('')} className="underline font-semibold">Dismiss</button>
         </div>
       )}
 
-      {/* Create new course */}
-      <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-card mb-6">
-        <p className="font-semibold text-navy mb-3">Create New Course</p>
-        <Field label="Title" value={newCourse.title} onChange={(v) => setNewCourse((p) => ({ ...p, title: v }))} placeholder="Course title" />
-        <Field label="Description" value={newCourse.description} onChange={(v) => setNewCourse((p) => ({ ...p, description: v }))} type="textarea" placeholder="Brief description" />
-        <label className="flex items-center gap-2 text-sm text-gray-600 mb-3">
-          <input type="checkbox" checked={newCourse.is_published} onChange={(e) => setNewCourse((p) => ({ ...p, is_published: e.target.checked }))} />
-          Publish immediately
-        </label>
-        <Button onClick={handleCreateCourse} disabled={saving || !newCourse.title.trim()}>
-          {saving ? 'Saving…' : 'Create Course'}
-        </Button>
-      </div>
+      {/* DUAL PANE WORKSPACE */}
+      <div className="flex flex-col md:flex-row gap-6 flex-1 min-h-0 overflow-hidden">
 
-      {/* Existing courses */}
-      <div className="space-y-4">
-        {courses.map((course) => (
-          <div key={course.id} className="border border-gray-100 rounded-lg bg-white shadow-card">
-            <div className="flex items-center justify-between p-4">
-              <div>
-                <p className="font-semibold text-navy">{course.title}</p>
-                <p className="text-xs text-gray-400">{(course.modules || []).length} modules · {(course.modules || []).reduce((s, m) => s + (m.lessons?.length || 0), 0)} lessons</p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setExpanded(expandedCourse === course.id ? null : course.id)}
-                  className="text-xs border border-navy text-navy px-3 py-1.5 rounded-md font-semibold"
-                >
-                  {expandedCourse === course.id ? 'Collapse' : 'Edit Content'}
-                </button>
-                <button
-                  onClick={() => handleDeleteCourse(course.id)}
-                  className="text-xs border border-red-300 text-red-600 px-3 py-1.5 rounded-md font-semibold"
-                >
-                  Delete
-                </button>
-              </div>
+        {/* LEFT SIDEBAR (Scrollable list of courses) */}
+        <div className="md:w-72 flex flex-col gap-2 overflow-y-auto pr-2 pb-10 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+
+          {/* Create New Course Button */}
+          <button
+            onClick={() => setActiveTab('new')}
+            className={`text-left px-5 py-4 rounded-xl border transition-all duration-200 shadow-sm ${
+              activeTab === 'new' 
+                ? 'bg-[#D19A30] text-white border-[#D19A30]' 
+                : 'bg-white text-[#D19A30] border-[#D19A30]/40 hover:bg-[#D19A30]/10'
+            }`}
+          >
+            <span className="font-bold text-sm tracking-wide">+ Create New Course</span>
+          </button>
+
+          <div className="h-px bg-gray-200 my-2"></div>
+
+          {/* Existing Courses List */}
+          {courses.map((course) => (
+            <button
+              key={course.id}
+              onClick={() => setActiveTab(course.id)}
+              className={`text-left px-5 py-4 rounded-xl border transition-all duration-200 shadow-sm ${
+                activeTab === course.id 
+                  ? 'bg-navy text-white border-navy' 
+                  : 'bg-white text-navy border-gray-200 hover:border-navy/30'
+              }`}
+            >
+              <p className="font-bold text-sm truncate">{course.title}</p>
+              <p className={`text-xs mt-1.5 font-medium ${activeTab === course.id ? 'text-gray-300' : 'text-gray-500'}`}>
+                {(course.modules || []).length} modules · {(course.modules || []).reduce((s, m) => s + (m.lessons?.length || 0), 0)} lessons
+              </p>
+            </button>
+          ))}
+        </div>
+
+        {/* RIGHT WORKSPACE (Scrollable forms) */}
+        <div className="flex-1 bg-white border border-[#D19A30]/40 rounded-2xl shadow-card overflow-y-auto p-6 md:p-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+
+          {/* VIEW: CREATE NEW COURSE */}
+          {activeTab === 'new' && (
+            <div className="max-w-2xl animate-fade-in">
+              <h2 className="text-xl font-bold text-navy mb-6 border-b border-gray-100 pb-4">Draft a New Course</h2>
+
+              <Field label="Course Title" value={newCourse.title} onChange={(v) => setNewCourse((p) => ({ ...p, title: v }))} placeholder="e.g., Introduction to Web Development" />
+              <Field label="Description" value={newCourse.description} onChange={(v) => setNewCourse((p) => ({ ...p, description: v }))} type="textarea" placeholder="Brief overview of the course..." />
+              <Field
+                label="What You Will Learn (Outcomes)"
+                value={newCourse.outcomes}
+                onChange={(v) => setNewCourse((p) => ({ ...p, outcomes: v }))}
+                type="textarea"
+                placeholder="Enter each outcome on a new line...&#10;e.g., Build a complete React app&#10;Understand database architecture"
+              />
+
+              <label className="flex items-center gap-3 text-sm font-semibold text-navy mb-6 mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100 w-fit">
+                <input type="checkbox" checked={newCourse.is_published} onChange={(e) => setNewCourse((p) => ({ ...p, is_published: e.target.checked }))} className="w-4 h-4 text-navy accent-navy" />
+                Publish immediately to learners
+              </label>
+
+              <Button onClick={handleCreateCourse} disabled={saving || !newCourse.title.trim()} className="px-8">
+                {saving ? 'Creating...' : 'Create Course'}
+              </Button>
             </div>
+          )}
 
-            {expandedCourse === course.id && (
-              <div className="border-t border-gray-100 p-4 space-y-4">
-                {/* Existing modules */}
-                {(course.modules || []).map((mod) => {
-                  const lessonKey = `${course.id}_${mod.id}`
+          {/* VIEW: EDIT EXISTING COURSE */}
+          {activeTab !== 'new' && activeCourse && (
+            <div className="animate-fade-in">
+              {/* Header & Delete Button */}
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-8 border-b border-gray-100 pb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-navy leading-tight">{activeCourse.title}</h2>
+                  <p className="text-sm font-medium text-gray-500 mt-2">
+                    {(activeCourse.modules || []).length} modules · {(activeCourse.modules || []).reduce((s, m) => s + (m.lessons?.length || 0), 0)} total lessons
+                  </p>
+                </div>
+
+                {/* Safely tucked away Delete button */}
+                <button
+                  onClick={() => handleDeleteCourse(activeCourse.id)}
+                  className="text-xs border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg font-bold transition-colors whitespace-nowrap shadow-sm"
+                >
+                  Delete Course
+                </button>
+              </div>
+
+              {/* Modules List */}
+              <div className="space-y-6">
+                {(activeCourse.modules || []).map((mod) => {
+                  const lessonKey = `${activeCourse.id}_${mod.id}`
                   const ls = newLesson[lessonKey] || {}
                   return (
-                    <div key={mod.id} className="bg-gray-50 rounded-lg p-3">
-                      <p className="font-medium text-navy text-sm mb-2">📦 {mod.title}</p>
-                      {(mod.lessons || []).map((l) => (
-                        <p key={l.id} className="text-xs text-gray-500 ml-4 mb-1">• {l.title} ({l.estimated_minutes || 0}m)</p>
-                      ))}
-                      {/* Add lesson form */}
-                      <div className="mt-3 border-t border-gray-200 pt-3">
-                        <p className="text-xs font-medium text-gray-500 mb-2">Add Lesson</p>
-                        <Field label="Title" value={ls.title || ''} onChange={(v) => setNewLesson((p) => ({ ...p, [lessonKey]: { ...ls, title: v } }))} placeholder="Lesson title" />
-                        <Field label="Content" value={ls.text_content || ''} onChange={(v) => setNewLesson((p) => ({ ...p, [lessonKey]: { ...ls, text_content: v } }))} type="textarea" placeholder="Lesson text content" />
-                        <Field label="Video URL" value={ls.video_s3_url || ''} onChange={(v) => setNewLesson((p) => ({ ...p, [lessonKey]: { ...ls, video_s3_url: v } }))} placeholder="e.g., https://your-bucket.s3.amazonaws.com/vid.mp4" />
-                        <Field label="Duration (minutes)" value={ls.estimated_minutes || ''} onChange={(v) => setNewLesson((p) => ({ ...p, [lessonKey]: { ...ls, estimated_minutes: v } }))} type="number" placeholder="10" />
-                        <Button onClick={() => handleCreateLesson(mod.id, course.id)} disabled={saving || !(ls.title || '').trim()}>
-                          Add Lesson
+                    <div key={mod.id} className="border border-[#D19A30]/30 bg-[#D19A30]/5 rounded-xl p-5 shadow-sm">
+                      <p className="font-bold text-lg text-navy mb-4 flex items-center gap-2">
+                        <span className="text-[#D19A30]">📦</span> {mod.title}
+                      </p>
+
+                      {/* Existing Lessons */}
+                      {mod.lessons?.length > 0 && (
+                        <div className="space-y-2 mb-6">
+                          {mod.lessons.map((l) => (
+                            <div key={l.id} className="flex justify-between items-center bg-white border border-[#D19A30]/20 rounded-lg p-3 shadow-sm">
+                              <span className="text-sm font-semibold text-navy truncate flex-1 pl-2 border-l-2 border-[#D19A30]">
+                                {l.title}
+                              </span>
+                              <span className="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded">
+                                {l.estimated_minutes || 0}m
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Add New Lesson Form */}
+                      <div className="bg-white border border-gray-200 rounded-xl p-5">
+                        <p className="text-sm font-bold text-navy mb-4">Add New Lesson</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+                          <div className="md:col-span-2">
+                            <Field label="Lesson Title" value={ls.title || ''} onChange={(v) => setNewLesson((p) => ({ ...p, [lessonKey]: { ...ls, title: v } }))} placeholder="e.g., Introduction to Components" />
+                          </div>
+                          <div className="md:col-span-2">
+                            <Field label="Text Content" value={ls.text_content || ''} onChange={(v) => setNewLesson((p) => ({ ...p, [lessonKey]: { ...ls, text_content: v } }))} type="textarea" placeholder="Lesson written material..." />
+                          </div>
+                          <Field label="Video URL (Optional)" value={ls.video_s3_url || ''} onChange={(v) => setNewLesson((p) => ({ ...p, [lessonKey]: { ...ls, video_s3_url: v } }))} placeholder="https://..." />
+                          <Field label="Duration (minutes)" value={ls.estimated_minutes || ''} onChange={(v) => setNewLesson((p) => ({ ...p, [lessonKey]: { ...ls, estimated_minutes: v } }))} type="number" placeholder="10" />
+                        </div>
+                        <Button onClick={() => handleCreateLesson(mod.id, activeCourse.id)} disabled={saving || !(ls.title || '').trim()} className="mt-2">
+                          Add Lesson to Module
                         </Button>
                       </div>
                     </div>
                   )
                 })}
 
-                {/* Add module form */}
-                <div className="border-t border-gray-200 pt-3">
-                  <p className="text-xs font-medium text-gray-500 mb-2">Add Module</p>
-                  <div className="flex gap-2">
+                {/* Add New Module Form */}
+                <div className="border border-dashed border-gray-300 bg-gray-50 rounded-xl p-6 text-center">
+                  <p className="text-sm font-bold text-navy mb-4">Add a New Module</p>
+                  <div className="flex max-w-md mx-auto gap-3">
                     <input
                       type="text"
-                      placeholder="Module title"
-                      value={newModule[course.id] || ''}
-                      onChange={(e) => setNewModule((p) => ({ ...p, [course.id]: e.target.value }))}
-                      className="flex-1 border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-navy"
+                      placeholder="e.g., Module 1: Getting Started"
+                      value={newModule[activeCourse.id] || ''}
+                      onChange={(e) => setNewModule((p) => ({ ...p, [activeCourse.id]: e.target.value }))}
+                      className="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 text-sm font-medium text-navy focus:outline-none focus:border-[#D19A30] focus:ring-1 focus:ring-[#D19A30] shadow-sm"
                     />
-                    <Button onClick={() => handleCreateModule(course.id)} disabled={saving}>Add</Button>
+                    <Button onClick={() => handleCreateModule(activeCourse.id)} disabled={saving || !(newModule[activeCourse.id] || '').trim()}>
+                      Add Module
+                    </Button>
                   </div>
                 </div>
+
               </div>
-            )}
-          </div>
-        ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
