@@ -35,7 +35,7 @@ export function AuthProvider({ children }) {
         uid:        profile.uid,
         email:      profile.email,
         full_name:  profile.full_name,
-        role:       (profile.role || 'Student').toLowerCase(),
+        role:       (profile.role || 'Student'),
         created_at: profile.created_at,
         is_active:  profile.is_active,
         _firebaseUser: firebaseUser,

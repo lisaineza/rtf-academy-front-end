@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
@@ -19,7 +18,10 @@ export default function LoginPage() {
     if (!email || !password) return setError('Invalid email or password.')
     try {
       const user = await login({ email, password })
-      navigate(user.role === 'admin' ? '/admin' : '/dashboard')
+      // SAFETY CHECK: Only navigate if the user object successfully returned
+      if (user) {
+        navigate(user.role === 'Admin' ? '/admin' : '/dashboard')
+      }
     } catch (err) {
       setError(err.message || 'Invalid email or password.')
     }
@@ -30,9 +32,12 @@ export default function LoginPage() {
     setGoogleLoading(true)
     try {
       const user = await loginWithGoogle()
-      navigate(user.role === 'admin' ? '/admin' : '/dashboard')
+      // SAFETY CHECK: Only navigate if the user object successfully returned
+      if (user) {
+        navigate(user.role === 'Admin' ? '/admin' : '/dashboard')
+      }
     } catch (err) {
-      setError(err.message)
+      setError(err.message || 'Google sign-in failed.')
     } finally {
       setGoogleLoading(false)
     }
@@ -41,10 +46,8 @@ export default function LoginPage() {
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center bg-gray-50 px-4 py-10">
 
-      {/* CHANGED: Card border is now gold */}
       <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-[#D19A30]/40 p-8 sm:p-10">
 
-        {/* CHANGED: Title text is now gold */}
         <h1 className="text-2xl font-bold text-[#D19A30] text-center mb-8">Welcome Back</h1>
 
         {error && <p className="text-sm text-red-600 mb-4 bg-red-50 rounded-md px-3 py-2 text-center">{error}</p>}

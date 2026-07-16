@@ -8,7 +8,7 @@ export default function Layout({ children }) {
   const { user } = useAuth()
 
   // 1. Check if the user is an admin
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = user?.role === 'Admin'
 
   // 2. Build the links based on the user's role
   let navLinks = []
