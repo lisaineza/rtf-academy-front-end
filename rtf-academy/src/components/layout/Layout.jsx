@@ -18,7 +18,7 @@ export default function Layout({ children }) {
     navLinks = [
       {
         name: 'Dashboard',
-        path: '/admin', // Or whatever your admin home route is
+        path: '/admin',
         icon: (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -30,7 +30,7 @@ export default function Layout({ children }) {
       },
       {
         name: 'Manage Courses',
-        path: '/admin/courses', // Or whatever your course builder route is
+        path: '/admin/courses',
         icon: (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
@@ -82,9 +82,11 @@ export default function Layout({ children }) {
   // Page layout definitions
   const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname)
   const isHomePage = location.pathname === '/'
-  const hasSidebar = !isAuthPage && !isHomePage
 
-  // PUBLIC/FULL-WIDTH LAYOUT (For Home Page and Auth Pages)
+  // FIX: Force sidebar to only appear if a user is actively logged in
+  const hasSidebar = !!user && !isAuthPage && !isHomePage
+
+  // PUBLIC/FULL-WIDTH LAYOUT (For Home Page, Auth Pages, and Unauthenticated Users)
   if (!hasSidebar) {
     return (
       <div className={`min-h-screen pt-16 flex flex-col ${isAuthPage ? 'bg-gray-100' : 'bg-white'}`}>
@@ -103,7 +105,6 @@ export default function Layout({ children }) {
       <aside className="hidden md:flex flex-col w-64 bg-navy fixed left-0 top-16 bottom-0 z-40">
         <nav className="flex-1 px-3 py-8 space-y-2">
           {navLinks.map((link) => {
-            // FIXED LOGIC: Requires exact match for '/admin' to prevent double highlighting
             const isActive = link.path === '/admin'
               ? location.pathname === '/admin' || location.pathname === '/admin/'
               : location.pathname.startsWith(link.path)
@@ -129,7 +130,6 @@ export default function Layout({ children }) {
       {/* MOBILE BOTTOM NAV */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-navy border-t border-white/10 flex justify-around items-center h-16 z-50 pb-safe">
         {navLinks.map((link) => {
-          // FIXED LOGIC: Applies same exact match to mobile view
           const isActive = link.path === '/admin'
             ? location.pathname === '/admin' || location.pathname === '/admin/'
             : location.pathname.startsWith(link.path)

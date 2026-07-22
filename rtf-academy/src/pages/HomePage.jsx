@@ -3,6 +3,14 @@ import { Link } from 'react-router-dom'
 import { api } from '../services/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 
+// Verified educational images without human faces
+const FALLBACK_IMAGES = [
+  'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=600&q=80'
+]
+
 export default function HomePage() {
   const { getToken } = useAuth()
   const [courses, setCourses] = useState([])
@@ -45,18 +53,26 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-5">
-            {courses.map((course) => (
-              <div key={course.id} className="border border-gray-100 rounded-lg overflow-hidden shadow-card bg-white">
-                {course.thumbnail_url
-                  ? <img src={course.thumbnail_url} alt={course.title} className="h-36 w-full object-cover" />
-                  : <div className="h-36 bg-navy flex items-center justify-center text-white text-sm font-semibold px-3 text-center">{course.title}</div>
-                }
+            {courses.map((course, index) => (
+              <div key={course.id} className="border border-gold rounded-lg overflow-hidden shadow-card bg-white">
+
+                <img
+                  src={course.thumbnail_url || FALLBACK_IMAGES[index % FALLBACK_IMAGES.length]}
+                  alt={course.title}
+                  className="h-36 w-full object-cover"
+                  // Force fallback if primary URL breaks
+                  onError={(e) => {
+                    e.currentTarget.onerror = null
+                    e.currentTarget.src = FALLBACK_IMAGES[index % FALLBACK_IMAGES.length]
+                  }}
+                />
+
                 <div className="p-4">
                   <p className="font-semibold text-navy">{course.title}</p>
                   <p className="text-xs text-gray-500 mb-3">
                     {course.module_count || 0} modules · {course.total_lessons || 0} lessons
                   </p>
-                  <Link to={`/courses/${course.id}`} className="inline-block bg-navy text-white text-xs font-semibold px-4 py-2 rounded-md">
+                  <Link to={`/courses/${course.id}`} className="inline-block bg-gold text-white text-xs font-semibold px-4 py-2 rounded-md">
                     Enroll Now
                   </Link>
                 </div>
