@@ -26,8 +26,11 @@ export default function AdminCourseBuilder() {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
-  // NEW: activeTab replaces expandedCourse. 'new' shows the create form, an ID shows the course editor.
+  // activeTab replaces expandedCourse. 'new' shows the create form, an ID shows the course editor.
   const [activeTab, setActiveTab] = useState('new')
+
+  // Track selected course for deletion modal
+  const [courseToDelete, setCourseToDelete] = useState(null)
 
   const [newCourse, setNewCourse] = useState({ title: '', description: '', is_published: true, outcomes: '' })
   const [newModule, setNewModule] = useState({})
@@ -69,12 +72,18 @@ export default function AdminCourseBuilder() {
     setSaving(false)
   }
 
-  async function handleDeleteCourse(id) {
-    if (!window.confirm('Delete this course and all its content? This cannot be undone.')) return
-    const token = await getToken()
-    await api.deleteCourse(id, token).catch((e) => setError(e.message))
-    setActiveTab('new') // Reset view to creation form after deleting
-    await refresh()
+  // Execute actual deletion
+  async function confirmDeleteCourse() {
+    if (!courseToDelete) return
+    try {
+      const token = await getToken()
+      await api.deleteCourse(courseToDelete.id, token)
+      setActiveTab('new') // Reset view to creation form after deleting
+      await refresh()
+    } catch (e) {
+      setError(e.message)
+    }
+    setCourseToDelete(null)
   }
 
   async function handleCreateModule(courseId) {
@@ -122,7 +131,7 @@ export default function AdminCourseBuilder() {
   if (!activeCourse && activeTab !== 'new') setActiveTab('new')
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] max-w-6xl mx-auto px-4 py-6">
+    <div className="flex flex-col h-[calc(100vh-80px)] max-w-6xl mx-auto px-4 py-6 relative">
 
       {/* Header Area */}
       <div className="flex items-center justify-between mb-6 flex-shrink-0">
@@ -219,9 +228,9 @@ export default function AdminCourseBuilder() {
                   </p>
                 </div>
 
-                {/* Safely tucked away Delete button */}
+                {/* Open custom modal instead of window.confirm */}
                 <button
-                  onClick={() => handleDeleteCourse(activeCourse.id)}
+                  onClick={() => setCourseToDelete(activeCourse)}
                   className="text-xs border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg font-bold transition-colors whitespace-nowrap shadow-sm"
                 >
                   Delete Course
@@ -235,9 +244,19 @@ export default function AdminCourseBuilder() {
                   const ls = newLesson[lessonKey] || {}
                   return (
                     <div key={mod.id} className="border border-[#D19A30]/30 bg-[#D19A30]/5 rounded-xl p-5 shadow-sm">
-                      <p className="font-bold text-lg text-navy mb-4 flex items-center gap-2">
-                        <span className="text-[#D19A30]">📦</span> {mod.title}
-                      </p>
+
+                      {/* Module header w/ quiz button */}
+                      <div className="flex justify-between items-center mb-4">
+                        <p className="font-bold text-lg text-navy flex items-center gap-2">
+                          <span className="text-[#D19A30]">📦</span> {mod.title}
+                        </p>
+                        <Link
+                          to={`/admin/quizzes/module/${mod.id}`}
+                          className="text-xs font-semibold bg-white border border-[#D19A30] text-[#D19A30] hover:bg-[#D19A30] hover:text-white px-3 py-1.5 rounded-md transition-colors shadow-sm"
+                        >
+                          Manage Quiz
+                        </Link>
+                      </div>
 
                       {/* Existing Lessons */}
                       {mod.lessons?.length > 0 && (
@@ -298,6 +317,39 @@ export default function AdminCourseBuilder() {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {courseToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-fade-in border border-gray-100">
+            <div className="flex items-center gap-3 mb-4 text-red-600">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18"></path>
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+              </svg>
+              <h2 className="text-lg font-bold text-navy">Delete Course?</h2>
+            </div>
+            <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+              Are you sure you want to delete <span className="font-bold text-navy">"{courseToDelete.title}"</span>? This will permanently remove all modules, lessons, and content. This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setCourseToDelete(null)}
+                className="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteCourse}
+                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-sm"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

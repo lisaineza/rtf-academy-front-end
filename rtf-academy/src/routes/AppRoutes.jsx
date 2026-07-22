@@ -1,5 +1,4 @@
 
-
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 
@@ -28,6 +27,8 @@ import EnrollmentSuccessPage from '../pages/student/EnrollmentSuccessPage.jsx'
 // Admin pages
 import AdminDashboard        from '../pages/admin/AdminDashboard.jsx'
 import AdminCourseBuilder    from '../pages/admin/AdminCourseBuilder.jsx'
+import AdminQuizzesPage      from '../pages/admin/AdminQuizzesPage.jsx'
+import AdminQuizEditor       from '../pages/admin/AdminQuizEditor.jsx'
 
 export default function AppRoutes() {
   const { loading } = useAuth()
@@ -83,6 +84,12 @@ export default function AppRoutes() {
         } />
         <Route path="/admin/courses" element={
           <ProtectedRoute adminOnly><AdminCourseBuilder /></ProtectedRoute>
+        } />
+        <Route path="/admin/quizzes" element={
+          <ProtectedRoute adminOnly><AdminQuizzesPage /></ProtectedRoute>
+        } />
+        <Route path="/admin/quizzes/module/:moduleId" element={
+          <ProtectedRoute adminOnly><AdminQuizEditor /></ProtectedRoute>
         } />
 
         {/* ── Fallback ────────────────────────────────────────────────── */}

@@ -1,4 +1,3 @@
-
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
 import logo from '../../assets/logo.png'
@@ -8,7 +7,7 @@ export default function Header() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Define which pages get the original public layout
+  // Define active layout
   const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname)
   const isHomePage = location.pathname === '/'
   const isPublicLayout = isHomePage || isAuthPage
@@ -19,10 +18,11 @@ export default function Header() {
   if (isPublicLayout) {
     return (
       <header className="bg-white border-b border-gray-100 fixed top-0 w-full z-50 h-16 flex items-center">
-        <div className="max-w-6xl mx-auto px-4 w-full flex items-center justify-between">
+        {/* Changed max-w-6xl to max-w-7xl and increased padding for desktop to push items apart */}
+        <div className="max-w-7xl mx-auto px-4 md:px-8 w-full flex items-center justify-between">
 
           <Link to="/" className="flex items-center gap-2">
-            <img src={logo} alt="Raise Them Foundation" className="h-8 w-auto" />
+            <img src={logo} alt="Raise Them Foundation" className="h-10 w-auto object-contain" />
           </Link>
 
           {isHomePage && (
@@ -60,21 +60,24 @@ export default function Header() {
     <header className="bg-navy fixed top-0 w-full z-50 h-16 flex items-center">
 
       <div className="hidden md:flex items-center justify-center w-64 flex-shrink-0">
-        <Link to="/" className="flex items-center bg-white px-4 py-1.5 rounded-full shadow-sm">
-          <img src={logo} alt="Raise Them Foundation" className="h-7 w-auto" />
+        {/* Reduced vertical padding to py-1 */}
+        <Link to="/" className="flex items-center bg-white px-4 py-1 rounded-full shadow-sm">
+          {/* Increased height to h-10 and added object-contain */}
+          <img src={logo} alt="Raise Them Foundation" className="h-10 w-auto object-contain" />
         </Link>
       </div>
 
       <div className="flex-1 flex items-center justify-between px-6 md:pl-10 md:pr-6">
 
         <div className="flex items-center">
-          <Link to="/" className="flex items-center bg-white px-4 py-1.5 rounded-full shadow-sm mr-4 md:hidden">
-            <img src={logo} alt="Raise Them Foundation" className="h-7 w-auto" />
+          {/* Reduced vertical padding to py-1 */}
+          <Link to="/" className="flex items-center bg-white px-4 py-1 rounded-full shadow-sm mr-4 md:hidden">
+            {/* Increased height to h-10 and added object-contain */}
+            <img src={logo} alt="Raise Them Foundation" className="h-10 w-auto object-contain" />
           </Link>
         </div>
 
         <div className="flex items-center gap-5">
-          {/* CHANGED: Conditionally render Log Out vs Sign In based on authentication */}
           {user ? (
              <button onClick={() => { logout(); navigate('/') }} className="text-sm text-white font-medium hover:text-gray-300 transition-colors">
                Log out
